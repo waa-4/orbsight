@@ -23,3 +23,12 @@ v0.1's blank page came from the Three.js addon import not being resolved correct
 Upload `index.html` to the repository root, then use Settings -> Pages -> Deploy from branch -> main / root.
 
 This page imports Three.js from jsDelivr and therefore needs internet access.
+
+
+## v0.2.1 collision patch
+- Orbsight model scaled down to 74% of its previous size.
+- Body collision radius reduced to match the new size.
+- Wall collision changed from rough circle-vs-circle collision to proper circle-vs-box collision.
+- If Orbsight somehow lands fully inside a block, it snaps back to its last safe position instead of getting trapped.
+- Collision responses turn it away more aggressively from obstacles.
+- Follow camera moved closer to fit the smaller creature.
