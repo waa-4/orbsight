@@ -73,3 +73,19 @@ Upload `index.html` to a repo root and enable:
 Settings -> Pages -> Deploy from branch -> main / root
 
 Three.js is loaded from jsDelivr, so an internet connection is required.
+
+
+## v0.3.1 physics patch
+- Limb joints now use spring-damper angular physics rather than snapping directly to desired rotations.
+- Every hip, knee, ankle, and foot joint has:
+  - angular position
+  - angular velocity
+  - target angle
+  - joint limits
+  - spring strength
+  - damping
+- Feet estimate ground contact and the body receives support force from contact.
+- Main shell/body mass is intentionally low so the small legs can move it.
+- The body has gravity, vertical velocity, support force, spring stabilization, and damping.
+- Limb/foot clipping into the floor is reduced by lifting the body based on measured foot penetration.
+- Motor-learning still supplies joint targets, but physics determines whether the body actually follows them.
