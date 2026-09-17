@@ -1,55 +1,68 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Orbsight v0.1</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Orbsight v0.2</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0d12;--p:#141821;--p2:#0f131b;--t:#f5f7fb;--m:#9aa3b2;--l:#252c39;--a:#7b8cff}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--t);font-family:system-ui,Arial,sans-serif}main{max-width:1300px;margin:auto;padding:14px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m)}.top p{margin:4px 0 0;color:var(--m)}button{min-height:42px;border:1px solid var(--l);background:var(--p);color:var(--t);border-radius:9px;padding:8px 12px;cursor:pointer}.buttons{display:flex;gap:7px;flex-wrap:wrap}.layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:12px}.view{position:relative;border:1px solid var(--l);border-radius:13px;overflow:hidden;background:#080a0e}canvas{width:100%;height:610px;display:block;touch-action:none}.chip{position:absolute;right:10px;top:10px;background:#000b;border:1px solid #ffffff1c;border-radius:8px;padding:7px 9px;font-size:12px;max-width:60%;text-align:right}.hint{position:absolute;left:10px;bottom:10px;background:#000b;border-radius:8px;padding:6px 9px;font-size:12px;color:#d7dce5}.panel{background:var(--p);border:1px solid var(--l);border-radius:13px;padding:13px;max-height:610px;overflow:auto}.panel.hidden{display:none}.panel h2{margin:0 0 8px}.sec{border-top:1px solid var(--l);padding:11px 0}.sec:first-of-type{border-top:0}.sec h3{margin:0 0 8px;font-size:14px}.meter{margin:8px 0}.row{display:flex;justify-content:space-between;gap:10px;font-size:13px}.row b{font-weight:600;color:#dfe4ef}.bar{height:7px;background:#090c11;border-radius:99px;overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--a);width:0;transition:width .15s}.sec p,.sec li{font-size:12.5px;line-height:1.4;color:var(--m)}ul{padding-left:18px;margin:6px 0}.notes{margin-top:12px;padding:13px;border:1px solid var(--l);background:var(--p2);border-radius:13px;color:var(--m)}.err{margin-bottom:12px;padding:12px;border:1px solid #7d3c3c;background:#2b1717;border-radius:10px}.err[hidden]{display:none}@media(max-width:900px){.top{flex-direction:column;align-items:flex-start}.layout{grid-template-columns:1fr}canvas{height:460px}.panel{max-height:none}}@media(max-width:520px){canvas{height:380px}.buttons{width:100%}.buttons button{flex:1 1 45%}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
 </head>
-<body>
-  <main id="app">
-    <section class="topbar">
-      <div>
-        <h1>Orbsight <span>v0.1</span></h1>
-        <p>First living test: body, eye, simple senses, wandering and touch.</p>
-      </div>
-      <div class="controls">
-        <button id="pauseBtn">Pause</button>
-        <button id="resetBtn">Reset</button>
-        <button id="followBtn">Follow: ON</button>
-      </div>
-    </section>
-
-    <section class="layout">
-      <div class="viewport-wrap">
-        <canvas id="world"></canvas>
-        <div class="hint">Drag to orbit • wheel/pinch to zoom</div>
-      </div>
-
-      <aside class="panel">
-        <h2>Brain monitor</h2>
-        <div class="meter"><div class="row"><span>Vision</span><b id="visionText">nothing</b></div><div class="bar"><i id="visionBar"></i></div></div>
-        <div class="meter"><div class="row"><span>Touch</span><b id="touchText">none</b></div><div class="bar"><i id="touchBar"></i></div></div>
-        <div class="meter"><div class="row"><span>Curiosity</span><b id="curiosityText">72%</b></div><div class="bar"><i id="curiosityBar"></i></div></div>
-        <div class="meter"><div class="row"><span>Fear</span><b id="fearText">8%</b></div><div class="bar"><i id="fearBar"></i></div></div>
-
-        <div class="state"><h3>Current thought</h3><p id="thought">Looking around...</p></div>
-        <div class="state"><h3>Known nearby things</h3><ul id="seenList"><li>none yet</li></ul></div>
-
-        <div class="legend">
-          <h3>World</h3>
-          <p><span class="dot food"></span> green = food / interesting</p>
-          <p><span class="dot danger"></span> red = danger</p>
-          <p><span class="dot wall"></span> gray = obstacle</p>
-        </div>
-      </aside>
-    </section>
-
-    <section class="notes">
-      <h2>What v0.1 is proving</h2>
-      <p>Orbsight is not using a real neural network yet. This version gives it a tiny hand-built sensory loop so we can verify the body, eye direction, collision/touch, basic curiosity/fear values, and a visible decision cycle before making the brain more complicated.</p>
-    </section>
-  </main>
-  <script type="module" src="main.js"></script>
-</body>
-</html>
+<body><main>
+<header class="top"><div><h1>Orbsight <span>v0.2</span></h1><p>Senses, needs, memory, and articulated plantigrade movement.</p></div><div class="buttons"><button id="pause">Pause</button><button id="reset">Reset</button><button id="follow">Follow: ON</button><button id="brain">Brain: ON</button></div></header>
+<div id="err" class="err" hidden><b>Orbsight failed to start.</b><div id="errText"></div></div>
+<section class="layout"><div class="view"><canvas id="world"></canvas><div id="status" class="chip">booting...</div><div class="hint">Drag to orbit • wheel/pinch to zoom</div></div>
+<aside class="panel" id="panel"><h2>Brain monitor</h2>
+<div class="sec"><h3>Senses</h3>
+<div class="meter"><div class="row"><span>Vision</span><b id="visionT">nothing</b></div><div class="bar"><i id="visionB"></i></div></div>
+<div class="meter"><div class="row"><span>Smell</span><b id="smellT">quiet</b></div><div class="bar"><i id="smellB"></i></div></div>
+<div class="meter"><div class="row"><span>Touch</span><b id="touchT">none</b></div><div class="bar"><i id="touchB"></i></div></div>
+<div class="meter"><div class="row"><span>Spatial sense</span><b id="spaceT">stable</b></div><div class="bar"><i id="spaceB"></i></div></div></div>
+<div class="sec"><h3>Needs</h3>
+<div class="meter"><div class="row"><span>Energy</span><b id="energyT">100%</b></div><div class="bar"><i id="energyB"></i></div></div>
+<div class="meter"><div class="row"><span>Hunger</span><b id="hungerT">10%</b></div><div class="bar"><i id="hungerB"></i></div></div>
+<div class="meter"><div class="row"><span>Safety</span><b id="safetyT">90%</b></div><div class="bar"><i id="safetyB"></i></div></div>
+<div class="meter"><div class="row"><span>Curiosity</span><b id="curiosityT">70%</b></div><div class="bar"><i id="curiosityB"></i></div></div></div>
+<div class="sec"><h3>Current thought</h3><p id="thought">booting senses...</p></div>
+<div class="sec"><h3>Short-term memory</h3><ul id="short"><li>nothing yet</li></ul></div>
+<div class="sec"><h3>Long-term memory</h3><ul id="long"><li>nothing yet</li></ul></div>
+</aside></section>
+<div class="notes"><b>Roadmap:</b> v0.3 = personality + learning. v0.4 = real eye-camera vision + language/reading expressed through body movements.</div>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+const $=id=>document.getElementById(id), clamp=v=>Math.max(0,Math.min(1,v));
+try{
+const canvas=$('world'),scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1016);scene.fog=new THREE.Fog(0x0b1016,22,48);
+const camera=new THREE.PerspectiveCamera(55,1,.1,100);camera.position.set(8.5,6.7,10.5);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.shadowMap.enabled=true;
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1.2,0);controls.minDistance=4;controls.maxDistance=24;
+scene.add(new THREE.HemisphereLight(0xd8e2ff,0x243328,2.2));const sun=new THREE.DirectionalLight(0xffffff,2.5);sun.position.set(8,12,6);sun.castShadow=true;scene.add(sun);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(46,46),new THREE.MeshStandardMaterial({color:0x202a27,roughness:1}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);const grid=new THREE.GridHelper(46,46,0x34443f,0x27342f);grid.position.y=.006;scene.add(grid);
+const things=[];let tid=1;
+function thing(type,x,z,color,r=.5,label=type){let m;if(type==='wall'){m=new THREE.Mesh(new THREE.BoxGeometry(r*2,1.55,r*2),new THREE.MeshStandardMaterial({color}));m.position.set(x,.775,z)}else{m=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),new THREE.MeshStandardMaterial({color,roughness:.65}));m.position.set(x,r,z)}m.castShadow=true;m.receiveShadow=true;scene.add(m);const o={id:tid++,type,label,mesh:m,r:type==='wall'?r*1.15:r,active:true};things.push(o);return o}
+thing('food',-5,-3,0x58cc73,.55,'green food');thing('food',4,-5,0x58cc73,.48,'green food');thing('food',6,4,0x58cc73,.62,'green food');thing('danger',-6,5,0xe85c5c,.65,'red danger');thing('danger',1,7,0xe85c5c,.52,'red danger');thing('wall',-2,2,0x727b88,1.1,'stone block');thing('wall',3,1,0x727b88,1.35,'stone block');thing('wall',0,-6,0x727b88,1,'stone block');
+const orb=new THREE.Group();scene.add(orb);const shellMat=new THREE.MeshStandardMaterial({color:0xd9d4c8,roughness:.8}),dark=new THREE.MeshStandardMaterial({color:0x35383f,roughness:.92});
+const shell=new THREE.Mesh(new THREE.SphereGeometry(1.28,40,28),shellMat);shell.position.y=1.62;shell.castShadow=true;orb.add(shell);
+const eyePivot=new THREE.Group();eyePivot.position.set(0,1.72,1.05);orb.add(eyePivot);const eye=new THREE.Mesh(new THREE.SphereGeometry(.47,32,20),new THREE.MeshStandardMaterial({color:0xf7f6ef,roughness:.5}));eye.scale.z=.58;eye.position.z=.08;eyePivot.add(eye);const pupil=new THREE.Mesh(new THREE.SphereGeometry(.205,24,16),new THREE.MeshStandardMaterial({color:0x0d0f12}));pupil.scale.z=.52;pupil.position.z=.43;eyePivot.add(pupil);const ring=new THREE.Mesh(new THREE.TorusGeometry(.245,.035,10,28),new THREE.MeshStandardMaterial({color:0x30343a}));ring.position.z=.46;eyePivot.add(ring);
+function leg(side,front){const hip=new THREE.Group();hip.position.set(side*1,.95,front*.7);orb.add(hip);const upperP=new THREE.Group();hip.add(upperP);const upper=new THREE.Mesh(new THREE.CylinderGeometry(.085,.09,.72,10),dark);upper.position.y=-.34;upperP.add(upper);const knee=new THREE.Group();knee.position.y=-.68;upperP.add(knee);const lower=new THREE.Mesh(new THREE.CylinderGeometry(.075,.08,.63,10),dark);lower.position.y=-.29;knee.add(lower);const ankle=new THREE.Group();ankle.position.y=-.59;knee.add(ankle);const foot=new THREE.Mesh(new THREE.BoxGeometry(.22,.10,.45),dark);foot.position.set(0,-.05,.17);ankle.add(foot);hip.rotation.z=side*-.34;upperP.rotation.x=front*-.18;knee.rotation.x=-.22;ankle.rotation.x=.28;return{hip,upperP,knee,ankle,foot,side,front,phase:(side>0?Math.PI:0)+(front>0?.8:0)}}
+const legs=[leg(-1,1),leg(1,1),leg(-1,-1),leg(1,-1)];
+const s={heading:0,targetHeading:0,speed:0,paused:false,follow:true,energy:1,hunger:.1,safety:.9,curiosity:.7,touchPulse:0,space:1,vision:0,smell:0,thought:'booting senses...',think:0,time:0,eyeYaw:0,eyePitch:0,targetEyeYaw:0,targetEyePitch:0,eyeTimer:0,short:[],long:new Map()};
+function short(text,imp=.3){if(s.short[0]?.text===text&&s.time-s.short[0].time<1.2)return;s.short.unshift({text,imp,time:s.time});s.short=s.short.slice(0,6);if(imp>=.7){const o=s.long.get(text)||{count:0,strength:0};o.count++;o.strength=clamp(Math.max(o.strength*.92,imp));s.long.set(text,o)}}
+function place(item,feeling){const k=`${item.type}#${item.id}`,o=s.long.get(k)||{count:0,strength:0,label:item.label,x:item.mesh.position.x,z:item.mesh.position.z,feeling};o.count++;o.strength=clamp(Math.max(o.strength*.94,feeling==='danger'?.95:.72));o.x=item.mesh.position.x;o.z=item.mesh.position.z;o.feeling=feeling;s.long.set(k,o)}
+const tmp=new THREE.Vector3(),forward=new THREE.Vector3(),visible=[];
+function sense(){visible.length=0;forward.set(Math.sin(s.heading),0,Math.cos(s.heading));let nv=null,nf=null,nd=null;for(const it of things){if(!it.active)continue;tmp.copy(it.mesh.position).sub(orb.position);tmp.y=0;const d=tmp.length(),dir=tmp.clone().normalize(),dot=forward.dot(dir);if(it.type==='food'&&(!nf||d<nf.d))nf={it,d};if(it.type==='danger'&&(!nd||d<nd.d))nd={it,d};if(d<8.5&&dot>.46){const a=Math.atan2(forward.x*dir.z-forward.z*dir.x,forward.dot(dir)),e={it,d,a};visible.push(e);if(!nv||d<nv.d)nv=e}}
+visible.sort((a,b)=>a.d-b.d);let smell=0,sl='quiet';if(nf){const v=clamp(1-nf.d/10);if(v>smell){smell=v;sl='food scent'}}if(nd){const v=clamp(1-nd.d/9);if(v>smell){smell=v;sl='sharp danger scent'}}s.smell=smell;$('smellT').textContent=sl;$('smellB').style.width=smell*100+'%';
+if(nv){s.vision=clamp(1-nv.d/9);$('visionT').textContent=`${nv.it.label} ${nv.d.toFixed(1)}m`;s.targetEyeYaw=THREE.MathUtils.clamp(nv.a,-.48,.48);s.targetEyePitch=0;short(`saw ${nv.it.label}`,nv.it.type==='danger'?.82:.45);place(nv.it,nv.it.type==='danger'?'danger':'interesting')}else{s.vision=.03;$('visionT').textContent='nothing obvious';s.eyeTimer-=.65;if(s.eyeTimer<=0){s.targetEyeYaw=(Math.random()-.5)*.65;s.targetEyePitch=(Math.random()-.5)*.2;s.eyeTimer=1.4+Math.random()*1.5}}$('visionB').style.width=s.vision*100+'%';return{nv,nf,nd}}
+function memTarget(type){let b=null;for(const[k,m]of s.long){if(!k.startsWith(type+'#'))continue;if(!b||m.strength>b.strength)b=m}return b}
+function decide(q){const{nv,nf,nd}=q;if(nd&&nd.d<4.4){s.safety=clamp(s.safety-.13);s.thought='Danger is close. Move away.';const p=nd.it.mesh.position;s.targetHeading=Math.atan2(orb.position.x-p.x,orb.position.z-p.z);s.speed=.95;short('escaped nearby danger',.92);place(nd.it,'danger')}else if(s.hunger>.56){const f=nv?.it.type==='food'?nv.it:null;if(f){s.thought='Hungry. Food is visible.';const p=f.mesh.position;s.targetHeading=Math.atan2(p.x-orb.position.x,p.z-orb.position.z);s.speed=.7}else{const m=memTarget('food');if(m){s.thought='Hungry. Recalling a food location.';s.targetHeading=Math.atan2(m.x-orb.position.x,m.z-orb.position.z);s.speed=.58;short('recalled food location',.55)}else{s.thought='Hungry, but no food memory yet.';s.targetHeading+=(Math.random()-.5)*1.5;s.speed=.45}}}else if(s.energy<.2){s.thought='Very tired. Resting.';s.speed=.04;s.energy=clamp(s.energy+.012);short('rested because energy was low',.38)}else if(nv&&s.curiosity>.4&&nv.it.type!=='danger'){s.thought=`Curious about ${nv.it.label}.`;const p=nv.it.mesh.position;s.targetHeading=Math.atan2(p.x-orb.position.x,p.z-orb.position.z);s.speed=.48+s.curiosity*.22}else{s.thought='Nothing urgent. Exploring.';if(Math.random()<.48)s.targetHeading+=(Math.random()-.5)*1.45;s.speed=.32}$('thought').textContent=s.thought;$('status').textContent=s.thought}
+function collision(dt){s.touchPulse=Math.max(0,s.touchPulse-dt*2.2);let touch=null;for(const it of things){if(!it.active)continue;const dx=orb.position.x-it.mesh.position.x,dz=orb.position.z-it.mesh.position.z,d=Math.hypot(dx,dz),min=1.03+it.r;if(d<min){touch=it.label;s.touchPulse=1;if(it.type==='food'){it.active=false;it.mesh.visible=false;s.hunger=clamp(s.hunger-.48);s.energy=clamp(s.energy+.23);s.curiosity=clamp(s.curiosity+.05);s.thought='Ate food. Remembering this was useful.';short('ate green food',.9);place(it,'useful');setTimeout(()=>{it.mesh.position.x=(Math.random()-.5)*15;it.mesh.position.z=(Math.random()-.5)*15;it.active=true;it.mesh.visible=true},5000)}else{const nx=dx/(d||1),nz=dz/(d||1);orb.position.x=it.mesh.position.x+nx*min;orb.position.z=it.mesh.position.z+nz*min;s.targetHeading+=Math.PI*.72+(Math.random()-.5)*.7;s.speed*=.3;if(it.type==='danger'){s.safety=clamp(s.safety-.28);s.energy=clamp(s.energy-.1);short('touched danger and was hurt',1);place(it,'danger')}else short(`touched ${it.label}`,.45)}}}const edge=20.5;if(Math.abs(orb.position.x)>edge||Math.abs(orb.position.z)>edge){orb.position.x=THREE.MathUtils.clamp(orb.position.x,-edge,edge);orb.position.z=THREE.MathUtils.clamp(orb.position.z,-edge,edge);s.targetHeading+=Math.PI;touch='world edge';s.touchPulse=1;short('touched the edge of the world',.55)}$('touchT').textContent=touch||'none';$('touchB').style.width=s.touchPulse*100+'%'}
+function needs(dt){s.hunger=clamp(s.hunger+dt*.004);s.energy=clamp(s.energy-dt*(s.speed>.1?.003:.0006));s.curiosity=clamp(s.curiosity+dt*(visible.length?-.0012:.0016));s.safety=clamp(s.safety+dt*.006);s.space=clamp(.78+s.energy*.2-s.touchPulse*.3)}
+function body(dt){const t=s.time*(3.4+s.speed*5.3);for(const l of legs){const st=Math.sin(t+l.phase),lift=Math.max(0,st);l.hip.rotation.x=l.front*.08+st*.24*s.speed;l.upperP.rotation.z=l.side*-.34;l.upperP.rotation.x=l.front*-.12+st*.18*s.speed;l.knee.rotation.x=-.22+lift*.34*s.speed;l.ankle.rotation.x=.28-lift*.22*s.speed;l.foot.rotation.x=-.06+lift*.12*s.speed}s.eyeYaw=THREE.MathUtils.lerp(s.eyeYaw,s.targetEyeYaw,1-Math.pow(.001,dt));s.eyePitch=THREE.MathUtils.lerp(s.eyePitch,s.targetEyePitch,1-Math.pow(.001,dt));eyePivot.rotation.y=s.eyeYaw;eyePivot.rotation.x=s.eyePitch;shell.position.y=1.62+Math.abs(Math.sin(t))*.035*s.speed}
+function pct(v){return Math.round(clamp(v)*100)+'%'}function ui(){for(const n of['energy','hunger','safety','curiosity']){$(n+'T').textContent=pct(s[n]);$(n+'B').style.width=pct(s[n])}$('spaceT').textContent=s.space>.75?'stable':s.space>.45?'uncertain':'disoriented';$('spaceB').style.width=pct(s.space);$('short').innerHTML=s.short.length?s.short.map(m=>`<li>${m.text}</li>`).join(''):'<li>nothing yet</li>';const a=[...s.long.entries()].sort((a,b)=>b[1].strength-a[1].strength).slice(0,6);$('long').innerHTML=a.length?a.map(([k,m])=>k.includes('#')?`<li>${m.label} near (${m.x.toFixed(1)}, ${m.z.toFixed(1)}) — ${m.feeling}</li>`:`<li>${k} ×${m.count}</li>`).join(''):'<li>nothing yet</li>'}
+function wrap(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,Math.floor(r.width)),h=Math.max(1,Math.floor(r.height)),pr=renderer.getPixelRatio();if(canvas.width!==Math.floor(w*pr)||canvas.height!==Math.floor(h*pr)){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}}
+const clock=new THREE.Clock();let uit=.1;function tick(){requestAnimationFrame(tick);const dt=Math.min(.05,clock.getDelta());resize();if(!s.paused){s.time+=dt;needs(dt);s.think-=dt;if(s.think<=0){decide(sense());s.think=.45+Math.random()*.35}const d=wrap(s.targetHeading-s.heading);s.heading+=THREE.MathUtils.clamp(d,-dt*2.5,dt*2.5);orb.rotation.y=s.heading;orb.position.x+=Math.sin(s.heading)*s.speed*dt;orb.position.z+=Math.cos(s.heading)*s.speed*dt;collision(dt);body(dt)}uit-=dt;if(uit<=0){ui();uit=.15}if(s.follow){const des=new THREE.Vector3(orb.position.x+8.2,6.8,orb.position.z+10.2);camera.position.lerp(des,.025);controls.target.lerp(new THREE.Vector3(orb.position.x,1.25,orb.position.z),.05)}controls.update();renderer.render(scene,camera)}
+$('pause').onclick=e=>{s.paused=!s.paused;e.target.textContent=s.paused?'Resume':'Pause';$('status').textContent=s.paused?'paused':s.thought};$('follow').onclick=e=>{s.follow=!s.follow;e.target.textContent=`Follow: ${s.follow?'ON':'OFF'}`};$('brain').onclick=e=>{$('panel').classList.toggle('hidden');e.target.textContent=`Brain: ${$('panel').classList.contains('hidden')?'OFF':'ON'}`};$('reset').onclick=()=>{orb.position.set(0,0,0);s.heading=s.targetHeading=0;s.energy=1;s.hunger=.1;s.safety=.9;s.curiosity=.7;s.short=[];s.long.clear();s.thought='Fresh start. Looking around.';$('thought').textContent=s.thought};resize();ui();tick();
+}catch(e){console.error(e);$('err').hidden=false;$('errText').textContent=e?.message||String(e)}
+</script></body></html>
