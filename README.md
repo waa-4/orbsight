@@ -1,34 +1,75 @@
-# Orbsight v0.2
+# Orbsight v0.3
 
-## Display patch
-v0.1's blank page came from the Three.js addon import not being resolved correctly. v0.2 uses a browser import map for both `three` and `three/addons/`, and also shows a visible startup error if something fails.
+GitHub Pages prototype of the fictional simulated creature **Orbsight**.
 
-## v0.2
-- articulated plantigrade legs: hip, knee, ankle, foot
-- independently moving eye
-- senses: vision, smell, touch, spatial awareness
-- needs: energy, hunger, safety, curiosity
-- short-term memory
-- long-term memories of important events and approximate food/danger locations
-- remembered food can influence later navigation
-- food can be eaten; danger can hurt
-- pause/reset/follow/brain-view controls
-- mobile layout
+## Major changes
+
+### Population panel
+- Spawn up to **20 Orbsights**
+- Select any Orbsight to inspect its mind
+- Remove the selected Orbsight
+- Each creature has separate personality, memory, interests, and motor learning
+
+### Editable world
+You can add:
+- food
+- danger
+- blocks
+- toys
+- markers
+
+Objects can be placed at chosen X/Z coordinates or randomly.
+
+### Personality
+Every Orbsight now has persistent values for:
+- curiosity
+- bravery
+- stubbornness
+- sociability
+- patience
+- playfulness
+
+These affect target choice and behavior.
+
+### Interest fix
+Interests are no longer a permanent "go toward this forever" command.
+- repeated blocked approaches reduce interest
+- recently failed targets receive cooldowns
+- stuck detection forces a new direction
+- good outcomes raise interest
+- danger lowers its learned value
+- personality and needs alter target scores
+
+### Learning
+Two kinds are present in v0.3:
+
+1. **Experience learning**
+   - object interests change from outcomes
+   - locations/events enter memory
+   - blocked routes temporarily lose priority
+
+2. **Motor learning**
+   - there is no fixed pre-authored walking animation
+   - the brain controls hip, knee, ankle, and foot joints on all four legs
+   - each creature starts with an imperfect gait parameter set
+   - every trial window the simulation scores real displacement, balance, and collisions
+   - useful gait changes are kept; worse changes are rolled back
+   - the gait is then mutated again
+   - motor confidence rises as successful trials accumulate
+
+This is intentionally a simplified artificial-learning model, not biological neurons or full rigid-body physics yet.
 
 ## Roadmap
-- v0.3: personality + learning
-- v0.4: real eye-camera vision + language/reading communicated through learned body movements
+
+### v0.4
+- real image input from the eye camera
+- no direct object labels for vision
+- language / reading
+- learned physical communication using eye and body movements
 
 ## GitHub Pages
-Upload `index.html` to the repository root, then use Settings -> Pages -> Deploy from branch -> main / root.
+Upload `index.html` to a repo root and enable:
 
-This page imports Three.js from jsDelivr and therefore needs internet access.
+Settings -> Pages -> Deploy from branch -> main / root
 
-
-## v0.2.1 collision patch
-- Orbsight model scaled down to 74% of its previous size.
-- Body collision radius reduced to match the new size.
-- Wall collision changed from rough circle-vs-circle collision to proper circle-vs-box collision.
-- If Orbsight somehow lands fully inside a block, it snaps back to its last safe position instead of getting trapped.
-- Collision responses turn it away more aggressively from obstacles.
-- Follow camera moved closer to fit the smaller creature.
+Three.js is loaded from jsDelivr, so an internet connection is required.
