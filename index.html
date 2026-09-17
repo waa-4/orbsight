@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Orbsight v0.1</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="app">
+    <section class="topbar">
+      <div>
+        <h1>Orbsight <span>v0.1</span></h1>
+        <p>First living test: body, eye, simple senses, wandering and touch.</p>
+      </div>
+      <div class="controls">
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+        <button id="followBtn">Follow: ON</button>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="viewport-wrap">
+        <canvas id="world"></canvas>
+        <div class="hint">Drag to orbit • wheel/pinch to zoom</div>
+      </div>
+
+      <aside class="panel">
+        <h2>Brain monitor</h2>
+        <div class="meter"><div class="row"><span>Vision</span><b id="visionText">nothing</b></div><div class="bar"><i id="visionBar"></i></div></div>
+        <div class="meter"><div class="row"><span>Touch</span><b id="touchText">none</b></div><div class="bar"><i id="touchBar"></i></div></div>
+        <div class="meter"><div class="row"><span>Curiosity</span><b id="curiosityText">72%</b></div><div class="bar"><i id="curiosityBar"></i></div></div>
+        <div class="meter"><div class="row"><span>Fear</span><b id="fearText">8%</b></div><div class="bar"><i id="fearBar"></i></div></div>
+
+        <div class="state"><h3>Current thought</h3><p id="thought">Looking around...</p></div>
+        <div class="state"><h3>Known nearby things</h3><ul id="seenList"><li>none yet</li></ul></div>
+
+        <div class="legend">
+          <h3>World</h3>
+          <p><span class="dot food"></span> green = food / interesting</p>
+          <p><span class="dot danger"></span> red = danger</p>
+          <p><span class="dot wall"></span> gray = obstacle</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="notes">
+      <h2>What v0.1 is proving</h2>
+      <p>Orbsight is not using a real neural network yet. This version gives it a tiny hand-built sensory loop so we can verify the body, eye direction, collision/touch, basic curiosity/fear values, and a visible decision cycle before making the brain more complicated.</p>
+    </section>
+  </main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
