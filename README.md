@@ -1,25 +1,34 @@
-# Orbsight v0.10.3 — Clean Modules
+# Orbsight v0.10.4 — Joint Collision + Freecam
 
-This build keeps the engine at exactly five source files:
+Five engine files remain:
+- index.html
+- main-v0104.js
+- physics-v0104.js
+- mind-v0104.js
+- world-v0104.js
 
-- `index.html`
-- `main-v0103.js`
-- `physics-v0103.js`
-- `mind-v0103.js`
-- `world-v0103.js`
+## Folding fix
+The important change is real same-leg collision.
 
-The JavaScript filenames are deliberately new. This prevents GitHub Pages or the browser from
-reusing a stale v0.10/v0.10.1/v0.10.2 module.
+Earlier builds excluded a leg's own collision group, so non-adjacent parts of one leg could pass
+through each other. v0.10.4 includes the leg's own group in its collision mask. Because every hinge
+already uses `collideConnected:false`, directly connected neighbors still do not fight at the joint,
+while non-adjacent pieces can physically stop one another.
 
-The loader now imports the modules one at a time:
-1. physics
-2. world
-3. mind
-4. main
+Also:
+- solver iterations: 42
+- tighter solver tolerance
+- earlier/stronger limit barriers
+- more angular damping
+- continuous anti-fold spacing remains active
 
-If a module fails, the red panel names that exact module.
+## Freecam
+- Click Freecam or press F.
+- WASD moves horizontally.
+- Q/E moves vertically.
+- Mouse OrbitControls still rotate/pan.
+- Toggle again to follow selected.
 
-All fractional numbers were rewritten with leading zeros (`0.30` instead of `.30`) to remove
-any remaining parser ambiguity.
-
-No engine feature changes were made here; this is strictly a clean-load/debug build.
+## Remove
+`Remove selected` destroys the selected Orbsight and its constraints/mind bubble, then selects
+another remaining Orbsight if possible.

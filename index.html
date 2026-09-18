@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.10.3 — Clean Modules</title>
+<title>Orbsight v0.10.4 — Joint Collision + Freecam</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -34,7 +34,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <div id="app">
   <div id="view"><canvas id="c"></canvas><div id="status">starting v0.10…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.10.3</span></h1>
+    <h1>Orbsight <span>v0.10.4</span></h1>
     <div class="small">Five-file engine rebuild. index.html only contains UI/CSS; physics, mind, world, and bootstrap code are separate.</div>
 
     <div class="sec"><h3>Simulation</h3>
@@ -43,9 +43,9 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
         <label style="display:flex;align-items:center;gap:5px">Time
           <select id="timeScale" style="width:auto;margin:0"><option>.5</option><option selected>1</option><option>2</option><option>5</option><option>10</option><option>15</option></select>
         </label>
-        <button id="addOrb">Add Orbsight</button><button id="reset">Reset world</button>
+        <button id="addOrb">Add Orbsight</button><button id="removeOrb">Remove selected</button><button id="freecam">Freecam</button><button id="reset">Reset world</button>
       </div>
-      <div class="small" id="buildT" style="margin-top:7px"></div>
+      <div class="small" id="buildT" style="margin-top:7px"></div><div class="small">Freecam: button or F. WASD moves, Q/E down/up, mouse still rotates and pans.</div>
     </div>
 
     <div class="sec"><h3>World objects</h3>
@@ -91,7 +91,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
   const status=document.getElementById("status"),err=document.getElementById("err");
   function fail(label,e){
     const detail=(e&&e.stack)?e.stack:String(e);
-    status.textContent="v0.10.3 failed while loading "+label;
+    status.textContent="v0.10.4 failed while loading "+label;
     err.hidden=false;
     err.textContent="FAILED MODULE: "+label+"\n\n"+detail+
       "\n\nThis build uses brand-new module filenames, so an old cached v0.10.x file cannot be reused.";
@@ -105,14 +105,14 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
   }
 
   try{
-    status.textContent="checking physics-v0103.js…";
-    await import("./physics-v0103.js");
-    status.textContent="checking world-v0103.js…";
-    await import("./world-v0103.js");
-    status.textContent="checking mind-v0103.js…";
-    await import("./mind-v0103.js");
-    status.textContent="starting main-v0103.js…";
-    await import("./main-v0103.js");
+    status.textContent="checking physics-v0104.js…";
+    await import("./physics-v0104.js");
+    status.textContent="checking world-v0104.js…";
+    await import("./world-v0104.js");
+    status.textContent="checking mind-v0104.js…";
+    await import("./mind-v0104.js");
+    status.textContent="starting main-v0104.js…";
+    await import("./main-v0104.js");
   }catch(e){
     const current=status.textContent.replace("checking ","").replace("starting ","").replace("…","");
     fail(current||"unknown module",e);
