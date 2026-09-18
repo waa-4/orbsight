@@ -1,4 +1,4 @@
-# Orbsight v0.15 — Developmental Locomotion
+# Orbsight v0.16 — Neuromuscular Movement Remake
 
 Stable filenames:
 - index.html
@@ -8,73 +8,89 @@ Stable filenames:
 - world.js
 - README.md
 
-## Goal
-Movement should develop more like an animal instead of starting as a stiff robot.
+## Why this is a remake
+v0.15 still let the newborn controller continuously wave individual joints around like an
+inflatable tube. v0.16 removes that control style.
 
-### 1. Newborn flop
-Orbsights begin with weak muscles (roughly 11–19% strength depending on the joint).
-They make slow, independent joint twitches and are allowed to flop around.
+There is NO continuous newborn oscillator driving every joint.
 
-### 2. Reach + crawl
-As muscles strengthen through actual use, the mind begins reaching with individual legs.
-Feet can physically grip the ground or nearby surfaces.
+## New architecture
 
-### 3. Supported crawl
-A gripped foot acts as an anchor. The Orbsight flexes its hip and knee against the anchor,
-physically pulling the shell toward it. Grip skill improves when this actually produces movement.
+MIND
+- picks goals and developmental priorities
+- learns which leg primitives were useful
+- does not directly fling five joint targets continuously
 
-### 4. Stand practice
-Once muscles and crawling ability are stronger, the animal begins trying to support itself with
-multiple legs. Commands are still compliant and slightly wobbly.
+SPINAL LEG CONTROLLER
+Each leg can be in one action state:
+- relax
+- reach
+- plant
+- grip
+- pull
+- push
+- lift
 
-### 5. First steps
-With enough strength and balance experience, diagonal leg pairs begin small stepping experiments.
+The spinal controller converts that ONE whole-leg action into coordinated hip/knee/ankle/spread/roll
+targets. It is anatomy/reflex behavior, not navigation.
 
-### 6. Walking practice
-The learned motor policy gets progressively more authority as the body matures.
-
-## Muscle system
-Every joint now has:
+MUSCLES
+- soft compliant motor
+- slow neural target changes
 - strength
 - fatigue
-- accumulated use
-- smoothed target
-- smoothed activation
+- use-driven training
+- approximate antagonistic flexor/extensor behavior
 
-Strength grows slowly from successful muscle work, especially while the leg is loaded.
-Fatigue temporarily reduces effective strength. Sleeping restores fatigue faster.
+PHYSICS
+- Rapier hard joint limits
+- CCD
+- sole/contact sensors
+- physical spherical grip constraints
 
-The motor is intentionally soft:
-- lower stiffness
-- lower target velocity
-- much weaker torque impulse
-- much weaker angular-velocity assist
+## Newborn behavior
+Only one voluntary leg is usually active at a time.
+Occasionally one opposite leg may act as support.
+Other legs relax.
 
-This removes the robotic jitter/stiffness from v0.14.
+If a foot swings too fast, proprioception immediately sends that leg to RELAX instead of issuing
+another command.
 
-## Grip system
-Feet can grip:
-- the ground
-- platforms
-- walls
-- pushable blocks
-- logs
-- planks
+If a planted foot finds useful support, the spinal controller keeps it planted briefly instead of
+instantly waving it away.
 
-Grips are real Rapier spherical joints, not teleportation. They release after a pull, excessive
-stretch, sleep, or naturally as grip skill develops.
+## Development
+1. newborn motor discovery
+2. reach + plant
+3. grip + pull crawling
+4. supported crawling
+5. standing practice
+6. first steps
+7. walking practice
 
-## Floor tunneling fix
-Moving body parts now use CCD (continuous collision detection), reducing the chance of a foot being
-driven through the floor at higher simulation speeds.
+Progress is experience-based:
+- body map grows from successful movement/contact
+- crawl skill grows from grounded translation
+- grip skill grows from anchored pulls that actually move the body
+- support/balance grow from useful planted feet
+- step/walk skill grow only after upright translation
 
-## Learning
-Development is mostly success-gated rather than purely age-gated:
-- crawling skill grows from grounded horizontal motion
-- grip skill grows when anchored pulls create motion
-- standing skill grows from stable multi-foot support
-- balance grows while upright with support
-- walking skill grows from upright horizontal movement
+## Grip → crawl
+A planted foot can create a ground grip.
+A reaching foot can grip nearby platforms, walls, blocks, logs, and planks.
+A gripped leg may enter PULL:
+- hip retracts
+- knee flexes
+- anchored foot stays put
+- the shell is physically pulled toward that anchor
+- grip releases and another leg can reach
 
-The evolutionary/learned motor policy is still present, but it has little authority when the animal
-is weak. It becomes a larger modifier only after the body develops.
+## Floor protection
+Each foot has a sole-pressure sensor and foot-height sensor.
+If a foot is already contacting/pressing the floor, the controller does not deliberately continue a
+downward reach. A tiny emergency upward velocity correction only activates below the floor plane.
+
+## Walking
+Walking is not active at birth.
+After crawling/support/balance develop, the mind begins choosing lift/plant/push primitives in a
+more useful sequence. The learned policy only makes small nudges to these spinal primitives later.

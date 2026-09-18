@@ -109,7 +109,7 @@ export function createOrbsightBody(P,scene,id,x=0,z=0){
       index:i,side,front,hipMount,upper,lower,ankleMount,foot,
       joints:{spread,hip:hipJ,knee:kneeJ,ankle:ankleJ,roll},
       angles:{spread:0,hip:0,knee:0,ankle:0,roll:0},
-      contact:false,load:0,grip:null,gripCandidate:null,
+      contact:false,load:0,solePressure:0,footSpeed:0,footHeight:0,grip:null,gripCandidate:null,
       muscle:{
         spread:{strength:0.16,fatigue:0,use:0},
         hip:{strength:0.18,fatigue:0,use:0},
@@ -127,7 +127,7 @@ export function createOrbsightBody(P,scene,id,x=0,z=0){
 
   return{
     id,shell,shellMesh,eyeRoot,parts,joints,legs,contacts:0,upright:1,age:0,settling:true,
-    engine:"Rapier hard limits + mind-body velocity muscles",
+    engine:"Rapier limits + neuromuscular spinal controller",
     bridge:{
       gains:Array.from({length:4},()=>({spread:1,hip:1,knee:1,ankle:1,roll:1})),
       measured:Array.from({length:4},()=>({spread:0,hip:0,knee:0,ankle:0,roll:0})),
@@ -157,8 +157,11 @@ export function updateBodySensors(o,objects){
         if(dx<hx+0.14&&dz<hz+0.14)support=Math.max(support,top);
       }
     }
-    leg.contact=(fp.y-support)<0.16;
-    leg.load=leg.contact?clamp(1-Math.abs(fv.y)/1.8):0;
+    leg.footHeight=fp.y-support;
+    leg.footSpeed=Math.hypot(fv.x,fv.y,fv.z);
+    leg.contact=leg.footHeight<0.15;
+    leg.solePressure=leg.contact?clamp((0.15-leg.footHeight)/0.12,0,1)*clamp(1-Math.abs(fv.y)/2.0,0,1):0;
+    leg.load=leg.contact?clamp(0.35+leg.solePressure*0.65-Math.abs(fv.y)/2.2,0,1):0;
 
     // Touch/reach sensor for the mind: nearest climbable surface near this foot.
     leg.gripCandidate=null;
@@ -177,18 +180,19 @@ export function updateBodySensors(o,objects){
 
 function applySupportReflex(o,commands){
   const p=o.shell.translation(),v=o.shell.linvel();
-  const low=clamp((0.98-p.y)/0.34,0,1);
-  const falling=clamp((-v.y-0.18)/1.8,0,1);
-  const need=Math.max(low,falling);
+  const falling=clamp((-v.y-0.35)/2.2,0,1);
+  const veryLow=clamp((0.76-p.y)/0.22,0,1);
+  const need=Math.max(falling,veryLow);
   if(need<=0)return;
-  // Reflex only adds a little extensor tone. A newborn is still allowed to flop.
+
+  // Primitive spinal extensor tone only. It never chooses where to go.
   for(let i=0;i<o.legs.length;i++){
     const c=commands[i];
-    c.hip.target=THREE.MathUtils.lerp(c.hip.target,-0.10,need*0.18);
-    c.knee.target=THREE.MathUtils.lerp(c.knee.target,0.10,need*0.24);
-    c.ankle.target=THREE.MathUtils.lerp(c.ankle.target,0.05,need*0.18);
+    c.hip.target=THREE.MathUtils.lerp(c.hip.target,-0.08,need*0.10);
+    c.knee.target=THREE.MathUtils.lerp(c.knee.target,0.16,need*0.14);
+    c.ankle.target=THREE.MathUtils.lerp(c.ankle.target,0.04,need*0.10);
     for(const name of ["spread","hip","knee","ankle","roll"]){
-      c[name].activation=Math.max(c[name].activation,0.12+need*0.18);
+      c[name].activation=Math.max(c[name].activation,0.06+need*0.10);
     }
   }
 }
@@ -202,7 +206,7 @@ function worldAxis(body,axis){
 }
 function applyJointActuator(info,current,target,activation,dt){
   const err=target-current;
-  const impulse=clamp(err*activation*0.045,-0.006,0.006)*(dt*180);
+  const impulse=clamp(err*activation*0.018,-0.0025,0.0025)*(dt*180);
   if(Math.abs(impulse)<0.00001)return;
   const ax=worldAxis(info.bodyA,info.axisLocal);
   const t={x:ax.x*impulse,y:ax.y*impulse,z:ax.z*impulse};
@@ -219,11 +223,11 @@ function velocityActuator(info,current,target,activation,gain=1){
   // Direct angular-velocity muscle layer. This changes velocity, never position,
   // so Rapier's joints/limits remain authoritative.
   const err=target-current;
-  const desired=clamp(err*3.6,-1.8,1.8)*activation*gain;
+  const desired=clamp(err*1.9,-0.95,0.95)*activation*gain;
   const axis=worldAxis(info.bodyA,info.axisLocal);
   const avA=info.bodyA.angvel(),avB=info.bodyB.angvel();
   const rel=(avB.x-avA.x)*axis.x+(avB.y-avA.y)*axis.y+(avB.z-avA.z)*axis.z;
-  const delta=clamp(desired-rel,-0.10,0.10);
+  const delta=clamp(desired-rel,-0.045,0.045);
   const push=scaleVec(axis,delta*0.5);
   info.bodyA.setAngvel(subVec(avA,push),true);
   info.bodyB.setAngvel(addVec(avB,push),true);
@@ -275,55 +279,68 @@ export function updateGrips(P,o,dt){
     leg.grip.age+=dt;
     const fp=leg.foot.translation(),a=leg.grip.anchor;
     const stretch=Math.hypot(fp.x-a.x,fp.y-a.y,fp.z-a.z);
-    if(stretch>0.42 || leg.grip.age>4.5 || (!leg.grip.ground && (!leg.grip.target || !leg.grip.target.active)))releaseGrip(P,leg);
+    if(stretch>0.38 || leg.grip.age>3.6 || (!leg.grip.ground && (!leg.grip.target || !leg.grip.target.active)))releaseGrip(P,leg);
   }
 }
 
 export function driveBody(P,o,commands,dt){
   applySupportReflex(o,commands);
   let activity=0;
+
   for(let i=0;i<o.legs.length;i++){
     const leg=o.legs[i],cmd=commands[i];
+
     for(const name of ["spread","hip","knee","ankle","roll"]){
       const info=leg.joints[name],lim=JOINT_LIMITS[name],mus=leg.muscle[name],sm=leg.smooth[name];
       const rawTarget=clamp(cmd[name].target,lim[0],lim[1]);
       const rawActivation=clamp(cmd[name].activation,0,1);
 
-      // Nervous-system smoothing: muscles cannot instantaneously jump to a new pose.
-      const targetAlpha=1-Math.exp(-dt*(2.1+mus.strength*2.2));
-      const actAlpha=1-Math.exp(-dt*3.1);
+      // Neural delay/smoothing. Young Orbsights cannot snap a joint to a pose.
+      const nerveRate=1.0+mus.strength*1.6;
+      const targetAlpha=1-Math.exp(-dt*nerveRate);
+      const actAlpha=1-Math.exp(-dt*(1.8+mus.strength*1.4));
       sm.target=THREE.MathUtils.lerp(sm.target,rawTarget,targetAlpha);
       sm.activation=THREE.MathUtils.lerp(sm.activation,rawActivation,actAlpha);
 
-      // Biological strength: newborns are weak and floppy.
-      const freshness=clamp(1-mus.fatigue*0.72,0.28,1);
-      const effective=clamp(mus.strength*freshness,0.05,1);
-      const activation=sm.activation*effective;
+      const freshness=clamp(1-mus.fatigue*0.78,0.20,1);
+      const effective=clamp(mus.strength*freshness,0.04,1);
       const current=leg.angles[name]||0;
       const err=sm.target-current;
 
-      // Very compliant PD motor. Strength grows later instead of starting robotic/stiff.
-      const stiffness=2.0+effective*24+activation*16;
-      const damping=1.2+effective*5.5;
-      const targetVel=clamp(err*(2.1+effective*3.2),-1.35-effective*1.1,1.35+effective*1.1);
+      // Antagonistic-muscle approximation:
+      // flexor/extensor imbalance creates torque; co-contraction creates damping.
+      const effort=sm.activation*effective;
+      const flex=Math.max(0,err)*effort;
+      const extend=Math.max(0,-err)*effort;
+      const imbalance=flex-extend;
+      const coContraction=Math.min(flex,extend)+sm.activation*effective*0.18;
+
+      // Very soft joint motor. It acts like tendon guidance, not a robotic servo.
+      const stiffness=0.9+effective*8.5+sm.activation*effective*4.5;
+      const damping=1.8+effective*4.0+coContraction*4.0;
+      const targetVel=clamp(err*(0.9+effective*1.9),-0.65-effective*0.55,0.65+effective*0.55);
       info.joint.configureMotor(sm.target,targetVel,stiffness,damping);
 
-      // Tiny physical muscle assists. These are deliberately weak at birth.
-      const bridgeGain=(o.bridge?.gains?.[i]?.[name] ?? 1);
-      applyJointActuator(info,current,sm.target,activation*effective,dt);
-      velocityActuator(info,current,sm.target,activation,effective*(0.65+0.35*bridgeGain));
+      // Small physical muscle torque. Rapier's real limits remain the final authority.
+      applyJointActuator(info,current,sm.target,Math.abs(imbalance),dt);
+      velocityActuator(info,current,sm.target,sm.activation,effective*0.45);
 
-      // Use-driven strengthening + fatigue + recovery.
-      const work=Math.min(1,Math.abs(err)*1.8+Math.abs(targetVel)*0.12)*sm.activation;
+      // Realistic training: small gains from repeated useful work, faster under load.
+      const usefulLoad=leg.load*(name==="knee"||name==="hip"||name==="ankle"?1:0.35);
+      const work=Math.min(1,Math.abs(err)*0.9+Math.abs(targetVel)*0.16)*sm.activation;
       mus.use+=work*dt;
-      mus.fatigue=clamp(mus.fatigue+work*dt*0.050-dt*(0.018+0.018*(1-sm.activation)),0,1);
-      // Slow training; loaded legs strengthen a little faster.
-      const loadBonus=leg.load?0.55:0.12;
-      const train=work*(0.00030+loadBonus*0.00045);
-      mus.strength=clamp(mus.strength+train*dt*180,0.08,1.0);
+      mus.fatigue=clamp(mus.fatigue+work*dt*0.026-dt*(0.014+0.025*(1-sm.activation)),0,1);
+      const training=work*(0.00008+usefulLoad*0.00022);
+      mus.strength=clamp(mus.strength+training*dt*180,0.07,1.0);
 
       info.target=sm.target;
       activity+=Math.abs(err)*sm.activation;
+    }
+
+    // Sole protection: never command downward penetration when already pressing the floor.
+    if(leg.foot.translation().y<0.04){
+      const v=leg.foot.linvel();
+      if(v.y<0)leg.foot.setLinvel({x:v.x,y:Math.max(0.05,-v.y*0.12),z:v.z},true);
     }
   }
   return clamp(activity/5)
