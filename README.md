@@ -79,3 +79,52 @@ Upload `index.html` at the repo root, then enable:
 `Settings -> Pages -> Deploy from a branch -> main / root`
 
 Three.js and cannon-es are loaded from pinned jsDelivr modules, so the page needs internet access.
+
+
+## v0.3.4 biomechanics assistance
+
+This update does not give the high-level mind new forced actions. Instead it improves the physical body and adds low-level/local reflexes.
+
+### Lighter shell
+- shell mass reduced from 1.15 to 0.72
+- limb masses reduced slightly
+- extra damping reduces uncontrolled spinning without selecting a destination
+
+### More leg freedom
+Each leg now has five physical joint degrees used by the simulation:
+1. hip spread / abduction
+2. hip forward/back swing
+3. knee
+4. ankle pitch
+5. foot roll
+
+The new hip-spread joint lets a leg physically extend farther outward and create a wider support base.
+
+### Individual joint strength
+Every Orbsight is born with separate strength multipliers for every leg:
+- spread
+- hip
+- knee
+- ankle
+- foot
+
+So one leg can genuinely be stronger or weaker than another.
+
+### Passive foot leveling
+Each foot has a separate roll hinge.
+A local reflex compares that foot's orientation to the ground and rotates the foot toward a flatter contact angle when it is near the floor.
+
+This reflex:
+- does not know the Orbsight's target
+- does not choose where to walk
+- does not alter the gait phase
+- only helps a foot make stable contact
+
+### Other passive assistance
+- soft joint limits resist hyperextension
+- collapsing bodies temporarily receive a modest motor-force boost
+- angular damping increases when the shell becomes unstable
+- ground friction is slightly higher
+- recovery mode boosts local support forces but leaves the normal motor brain's chosen targets intact
+
+The only remaining external safety action is the existing lab upright reset after a long failed recovery.
