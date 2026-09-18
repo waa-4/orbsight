@@ -262,3 +262,32 @@ The existing v0.3.5 save slot remains in use so previous saved Orbsights can mig
 v0.4 additionally saves developmental motor stage/progress.
 
 Exact transient sensor readings are recomputed from the current physical body instead of being persisted.
+
+
+# v0.4.1 — Stability Patch
+
+This patch targets the collapsed/crooked posture visible in v0.4.
+
+## What was wrong
+The sensor systems were working, but the physical skeleton could still:
+- settle too low until the shell almost rested on the floor
+- twist limb bodies into awkward poses
+- inherit an overly aggressive saved gait immediately after loading
+- partially disable a jammed leg for too long
+- fold limb segments inward because creature parts intentionally do not self-collide
+
+## Fixes
+- shell restore/spawn height increased
+- 2.2 second neutral stance settling period after spawn/load
+- old saved gait genomes are sanitized into safe ranges
+- stronger angular damping on limb bodies to reduce corkscrew/twist
+- body-clearance reflex extends support when the shell gets too low
+- stance widens slightly when support is needed
+- joint working ranges are tighter without killing motor authority
+- jam relaxation is much shorter and only partially reduces force
+- anti-shell-fold skeletal repulsion prevents limb segments drifting through the center of the shell
+- torque reserve activates sooner during genuine motor stalls
+- new Body clearance and Support reflex telemetry in the panel
+
+These are low-level biomechanical protections. They do not select destinations,
+objects, headings, or gait phase for the Orbsight.
