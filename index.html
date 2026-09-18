@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.10.1 — Bootstrap Fix</title>
+<title>Orbsight v0.10.2 — Browser Syntax Fix</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -34,7 +34,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <div id="app">
   <div id="view"><canvas id="c"></canvas><div id="status">starting v0.10…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.10.1</span></h1>
+    <h1>Orbsight <span>v0.10.2</span></h1>
     <div class="small">Five-file engine rebuild. index.html only contains UI/CSS; physics, mind, world, and bootstrap code are separate.</div>
 
     <div class="sec"><h3>Simulation</h3>
@@ -90,7 +90,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 (function(){
   const status=document.getElementById("status"),err=document.getElementById("err");
   window.__orbBootError=function(msg){
-    status.textContent="v0.10.1 failed to start — see panel";
+    status.textContent="v0.10.2 failed to start — see panel";
     err.hidden=false;err.textContent=msg;
   };
   window.addEventListener("error",e=>window.__orbBootError((e.error&&e.error.stack)||e.message||String(e.error||e)));
@@ -105,7 +105,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
     );
     return;
   }
-  status.textContent="loading v0.10.1 modules…";
+  status.textContent="loading v0.10.2 modules…";
   import("./main.js?v=0.10.1").catch(e=>window.__orbBootError(
     "main.js could not load or initialize.\n\n"+(e&&e.stack?e.stack:String(e))+
     "\n\nMake sure main.js, physics.js, mind.js, and world.js are beside index.html."

@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import {tryGrip,releaseGrip,updateGrips} from "./physics.js?v=0.10.1";
-import {nearby} from "./world.js?v=0.10.1";
+import {tryGrip,releaseGrip,updateGrips} from "./physics.js?v=0.10.2";
+import {nearby} from "./world.js?v=0.10.2";
 
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -15,7 +15,7 @@ const CHAT=[
 const REPLIES=["Okay.","I see.","Maybe.","Same here.","Interesting.","I will try.","Be careful.","Where?","Good luck.","I noticed that too."];
 
 function weights(scale=.3){return Array.from({length:FEATURES},()=>rand(-scale,scale))}
-function seedPolicy(){return{freq:rand(.45,.9),gain:rand(.38,.62),phase:[0,Math.PI,Math.PI,0],legs:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,weights(j==="hip"?.30:.24)]))}}
+function seedPolicy(){return{freq:rand(.45,.9),gain:rand(.38,.62),phase:[0,Math.PI,Math.PI,0],legs:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,weights(j==="hip" ? .30 : .24)])))}}
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function mutate(p,amt=.08){
   const n=clone(p);const edits=1+Math.floor(Math.random()*3);
@@ -74,8 +74,8 @@ function sleep(app,o,dt){
 function learnBody(o,dt){
   const m=o.mind,p=o.shell.position,dx=p.x-m.prevPos.x,dy=p.y-m.prevPos.y,dz=p.z-m.prevPos.z;
   const forward=dx*Math.sin(m.desiredHeading)+dz*Math.cos(m.desiredHeading),h=Math.hypot(dx,dz);
-  let r=Math.max(0,forward)*13+h*2.8+Math.max(0,dy)*3.2+(o.contacts>=2?.004:0);if(o.foldRisk>.12)r-=.01;m.dense=r;m.denseAccum+=r;
-  for(let i=0;i<4;i++){const leg=o.legs[i];for(const j of JOINTS){const now=leg.angles?.[j]??0,prev=m.prevAngles[i][j],da=now-prev;if(Math.abs(da)>.0015){const e=m.model[i][j],sg=Math.sign(da),k=.025;e.forward=THREE.MathUtils.lerp(e.forward,clamp(forward*sg/dt,-1,1),k);e.lift=THREE.MathUtils.lerp(e.lift,clamp(dy*sg/dt,-1,1),k);e.support=THREE.MathUtils.lerp(e.support,(leg.contact?1:0)*sg,k);e.samples++}m.prevAngles[i][j]=now}}
+  let r=Math.max(0,forward)*13+h*2.8+Math.max(0,dy)*3.2+(o.contacts>=2 ? .004 : 0);if(o.foldRisk>.12)r-=.01;m.dense=r;m.denseAccum+=r;
+  for(let i=0;i<4;i++){const leg=o.legs[i];for(const j of JOINTS){const now=(leg.angles && leg.angles[j] !== undefined ? leg.angles[j] : 0),prev=m.prevAngles[i][j],da=now-prev;if(Math.abs(da)>.0015){const e=m.model[i][j],sg=Math.sign(da),k=.025;e.forward=THREE.MathUtils.lerp(e.forward,clamp(forward*sg/dt,-1,1),k);e.lift=THREE.MathUtils.lerp(e.lift,clamp(dy*sg/dt,-1,1),k);e.support=THREE.MathUtils.lerp(e.support,(leg.contact?1:0)*sg,k);e.samples++}m.prevAngles[i][j]=now}}
   const ev=m.evidence;if(o.upright>.58&&o.contacts>=2)ev.stable+=dt;if(h>.0004&&o.contacts>=1)ev.crawl+=dt;if(o.contacts>=2&&h>.00025)ev.transfer+=dt;if(h>.0005)ev.step+=dt;if(h>.0008&&o.upright>.48)ev.walk+=dt;
   if(m.stage===0&&sampleCount(m)>80)m.stage=1;if(m.stage===1&&(ev.stable>3||ev.crawl>4))m.stage=2;if(m.stage===2&&ev.crawl>9)m.stage=3;if(m.stage===3&&ev.transfer>8)m.stage=4;if(m.stage===4&&ev.step>10)m.stage=5;if(m.stage===5&&ev.walk>16)m.stage=6;m.stageName=stageName(m.stage);
   m.prevPos.copy(p);m.prevUpright=o.upright;m.prevContacts=o.contacts
@@ -86,7 +86,7 @@ function updatePolicy(o,dt){
   m.babble.timer-=dt;if(m.babble.timer<=0){m.babble.timer=m.stage===0?rand(.5,1):rand(1.4,2.6);m.babble.leg=Math.floor(Math.random()*4);m.babble.joint=JOINTS[Math.floor(Math.random()*JOINTS.length)];m.babble.target=rand(-1,1)}
   m.babble.value=THREE.MathUtils.lerp(m.babble.value,m.babble.target,1-Math.exp(-dt*1.8));
   let activity=0;
-  for(let i=0;i<4;i++){const leg=o.legs[i],ph=(m.phase[i]+=dt*m.policy.freq*Math.PI*2)+m.policy.phase[i];for(const j of JOINTS){const a=leg.angles?.[j]??0,e=m.model[i][j],f=[1,Math.sin(ph),Math.cos(ph),leg.contact?1:0,a,(leg.load||0),e.forward,e.lift];let out=policyOut(m.policy.legs[i][j],f,m.policy.gain);if(m.stage===0&&m.babble.leg===i&&m.babble.joint===j)out+=m.babble.value*.48;out=clamp(out,-1,1);let target=a+out*(j==="knee"?.18:j==="hip"?.15:.10);if(j==="knee")target=THREE.MathUtils.lerp(target,leg.contact?.26:.40,.05);m.command[i][j]={target,activation:.10+.90*Math.abs(out)};activity+=Math.abs(out)}}
+  for(let i=0;i<4;i++){const leg=o.legs[i],ph=(m.phase[i]+=dt*m.policy.freq*Math.PI*2)+m.policy.phase[i];for(const j of JOINTS){const a=(leg.angles && leg.angles[j] !== undefined ? leg.angles[j] : 0),e=m.model[i][j],f=[1,Math.sin(ph),Math.cos(ph),leg.contact?1:0,a,(leg.load||0),e.forward,e.lift];let out=policyOut(m.policy.legs[i][j],f,m.policy.gain);if(m.stage===0&&m.babble.leg===i&&m.babble.joint===j)out+=m.babble.value*.48;out=clamp(out,-1,1);let target=a+out*(j==="knee" ? .18 : (j==="hip" ? .15 : .10));if(j==="knee")target=THREE.MathUtils.lerp(target,leg.contact ? .26 : .40,.05);m.command[i][j]={target,activation:.10+.90*Math.abs(out)};activity+=Math.abs(out)}}
   m.activity=activity/20
 }
 function evaluate(o,app){
@@ -97,9 +97,9 @@ function evaluate(o,app){
 export function updateMind(app,o,dt){
   const m=o.mind;m.energy=clamp(m.energy-(m.sleep.sleeping?0:dt*(.0012+m.activity*.0016)));m.hunger=clamp(m.hunger+dt*.0025);
   social(app,o,dt);sleep(app,o,dt);updateGrips(app.P,o,dt);
-  if(m.sleep.sleeping){for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:o.legs[i].angles?.[j]??0,activation:.02};return m.command}
+  if(m.sleep.sleeping){for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:(o.legs[i].angles && o.legs[i].angles[j] !== undefined ? o.legs[i].angles[j] : 0),activation:.02};return m.command}
   m.decisionTimer-=dt;if(m.decisionTimer<=0){m.decisionTimer=2.4+rand(0,2.8)+m.personality.patience*2;chooseTarget(app,o)}
-  if(m.target?.active)m.desiredHeading=Math.atan2(m.target.body.position.x-o.shell.position.x,m.target.body.position.z-o.shell.position.z);
+  if((m.target && m.target.active))m.desiredHeading=Math.atan2(m.target.body.position.x-o.shell.position.x,m.target.body.position.z-o.shell.position.z);
   learnBody(o,dt);updatePolicy(o,dt);evaluate(o,app);
 
   // Opportunistic climbing grip: only if near a ledge and no joint is near a stop.
@@ -111,5 +111,5 @@ export function updateMind(app,o,dt){
   return m.command
 }
 export function cleanupMind(app,o){
-  if(!o.mind?.bubble)return;app.scene.remove(o.mind.bubble.sprite);o.mind.bubble.tex.dispose();o.mind.bubble.sprite.material.dispose()
+  if(!(o.mind && o.mind.bubble))return;app.scene.remove(o.mind.bubble.sprite);o.mind.bubble.tex.dispose();o.mind.bubble.sprite.material.dispose()
 }

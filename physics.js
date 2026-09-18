@@ -199,7 +199,10 @@ export function updateBodySensors(o,objects){
       if(!it.active)continue;
       if(["platform","wall","bed","slope"].includes(it.type)){
         const dx=Math.abs(leg.foot.position.x-it.body.position.x),dz=Math.abs(leg.foot.position.z-it.body.position.z);
-        const hx=it.meta?.hx??it.r,hz=it.meta?.hz??it.r,top=it.meta?.top??(it.body.position.y+(it.meta?.hy??.16));
+        const hx=(it.meta && it.meta.hx !== undefined) ? it.meta.hx : it.r;
+        const hz=(it.meta && it.meta.hz !== undefined) ? it.meta.hz : it.r;
+        const hy=(it.meta && it.meta.hy !== undefined) ? it.meta.hy : .16;
+        const top=(it.meta && it.meta.top !== undefined) ? it.meta.top : (it.body.position.y+hy);
         if(dx<hx+.15&&dz<hz+.15)support=Math.max(support,top);
       }
     }

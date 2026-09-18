@@ -1,12 +1,12 @@
 import * as THREE from "three";
 import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,enforceAnatomy,syncBody,destroyBody} from "./physics.js?v=0.10.1";
-import {setupWorld,addObject,resetMap,updateWorld,clearObjects} from "./world.js?v=0.10.1";
-import {attachMind,updateMind,cleanupMind} from "./mind.js?v=0.10.1";
+import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,enforceAnatomy,syncBody,destroyBody} from "./physics.js?v=0.10.2";
+import {setupWorld,addObject,resetMap,updateWorld,clearObjects} from "./world.js?v=0.10.2";
+import {attachMind,updateMind,cleanupMind} from "./mind.js?v=0.10.2";
 
-const BUILD="0.10.1-bootstrap-fix-2026-09-18";
+const BUILD="0.10.2-browser-syntax-fix-2026-09-18";
 const $=id=>document.getElementById(id);
-$("status").textContent="v0.10.1 main.js loaded — initializing…";
+$("status").textContent="v0.10.2 main.js loaded — initializing…";
 window.addEventListener("error",e=>{if(window.__orbBootError)window.__orbBootError((e.error&&e.error.stack)||e.message||String(e.error||e))});
 window.addEventListener("unhandledrejection",e=>{if(window.__orbBootError)window.__orbBootError((e.reason&&e.reason.stack)||String(e.reason))});
 const canvas=$("c"),renderer=new THREE.WebGLRenderer({canvas,antialias:true});
@@ -32,7 +32,7 @@ function refreshList(){
 function refreshUI(){
   const o=app.selected;if(!o)return;const m=o.mind;
   $("nameT").textContent=m.name;$("thoughtT").textContent=m.thought;$("stageT").textContent=m.stageName;$("energyT").textContent=Math.round(m.energy*100)+"%";$("uprightT").textContent=Math.round((o.upright*.5+.5)*100)+"%";$("contactsT").textContent=o.contacts+"/4";$("genT").textContent=m.generation;$("rewardT").textContent=m.dense.toFixed(3);$("fragmentsT").textContent=m.fragments.length;$("guardsT").textContent=o.guardHits;$("foldT").textContent=o.foldRisk.toFixed(3);$("gripsT").textContent=o.legs.filter(l=>l.grip).length+"/4";$("sleepT").textContent=m.sleep.sleeping?"sleeping":"awake";
-  $("jointT").innerHTML=o.legs.map(l=>`L${l.index+1}: hip ${(l.angles?.hip??0).toFixed(2)} • knee ${(l.angles?.knee??0).toFixed(2)} • ankle ${(l.angles?.ankle??0).toFixed(2)}${l.grip?" • GRIP":""}`).join("<br>");
+  $("jointT").innerHTML=o.legs.map(l=>`L${l.index+1}: hip ${(l.angles && l.angles.hip !== undefined ? l.angles.hip : 0).toFixed(2)} • knee ${(l.angles && l.angles.knee !== undefined ? l.angles.knee : 0).toFixed(2)} • ankle ${(l.angles && l.angles.ankle !== undefined ? l.angles.ankle : 0).toFixed(2)}${l.grip?" • GRIP":""}`).join("<br>");
   $("events").textContent=`Best score: ${m.bestScore<=-900?"learning":m.bestScore.toFixed(2)} • sleep gain: ${m.sleep.lastGain}`;
   $("objCount").textContent=`${app.objects.length} objects`;
   $("buildT").textContent=`${BUILD} • ${app.timeScale}×`;
@@ -46,9 +46,9 @@ $("randomObject").addEventListener("click",()=>addObject(app,$("objectType").val
 window.addEventListener("resize",resize);
 
 try{
-  $("status").textContent="v0.10.1 building world…";
+  $("status").textContent="v0.10.2 building world…";
   reset();
-  $("status").textContent="v0.10.1 modular engine running";
+  $("status").textContent="v0.10.2 modular engine running";
 }catch(e){
   if(window.__orbBootError)window.__orbBootError("Startup failed while building the world:\n\n"+(e&&e.stack?e.stack:String(e)));
   throw e;

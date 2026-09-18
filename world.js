@@ -19,28 +19,28 @@ export function addObject(app,type,x,z,r=.6,y=null){
   if(type==="wall"){
     const h=1.5;mesh=new THREE.Mesh(new THREE.BoxGeometry(r*2,h,r*2),mat(type));body=new CANNON.Body({mass:0,material:P.mats.object,shape:new CANNON.Box(cv(r,h/2,r)),position:cv(x,y??h/2,z)});meta={hx:r,hz:r,hy:h/2,top:(y??h/2)+h/2};
   }else if(type==="platform"||type==="bed"){
-    const hx=type==="bed"?Math.max(.9,r*1.4):Math.max(.7,r*1.65),hz=type==="bed"?Math.max(.65,r):Math.max(.7,r*1.65),hy=type==="bed"?.12:.16,py=y??hy;
+    const hx=type==="bed"?Math.max(.9,r*1.4):Math.max(.7,r*1.65),hz=type==="bed"?Math.max(.65,r):Math.max(.7,r*1.65),hy=type==="bed" ? .12 : .16,py=(y !== null && y !== undefined) ? y : hy;
     mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat(type));body=new CANNON.Body({mass:0,material:P.mats.object,shape:new CANNON.Box(cv(hx,hy,hz)),position:cv(x,py,z)});meta={hx,hz,hy,top:py+hy};
   }else if(type==="slope"){
-    const hx=Math.max(.85,r*1.5),hz=Math.max(.7,r*1.2),hy=.12,py=y??.30;
+    const hx=Math.max(.85,r*1.5),hz=Math.max(.7,r*1.2),hy=.12,py=(y !== null && y !== undefined) ? y : .30;
     mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat(type));mesh.rotation.z=-.20;
     body=new CANNON.Body({mass:0,material:P.mats.object,position:cv(x,py,z)});body.addShape(new CANNON.Box(cv(hx,hy,hz)));body.quaternion.setFromEuler(0,0,-.20);meta={hx,hz,hy,top:py+hy+.25};
   }else if(type==="pushblock"){
-    dynamic=true;const h=Math.max(.24,r*.65),py=y??h;
+    dynamic=true;const h=Math.max(.24,r*.65),py=(y !== null && y !== undefined) ? y : h;
     mesh=new THREE.Mesh(new THREE.BoxGeometry(h*2,h*2,h*2),mat(type));body=new CANNON.Body({mass:.34,material:P.mats.object,shape:new CANNON.Box(cv(h,h,h)),position:cv(x,py,z),linearDamping:.12,angularDamping:.16});r=h;meta={hx:h,hz:h,hy:h,top:py+h};
   }else if(type==="ball"){
-    dynamic=true;const rad=Math.max(.20,r*.72),py=y??rad;
+    dynamic=true;const rad=Math.max(.20,r*.72),py=(y !== null && y !== undefined) ? y : rad;
     mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,20,14),mat(type));body=new CANNON.Body({mass:.22,material:P.mats.object,shape:new CANNON.Sphere(rad),position:cv(x,py,z),linearDamping:.03,angularDamping:.025});r=rad;
   }else if(type==="log"){
-    dynamic=true;const rad=Math.max(.18,r*.45),len=Math.max(.65,r*1.6),py=y??rad;
+    dynamic=true;const rad=Math.max(.18,r*.45),len=Math.max(.65,r*1.6),py=(y !== null && y !== undefined) ? y : rad;
     mesh=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,12),mat(type));mesh.rotation.z=Math.PI/2;
     body=new CANNON.Body({mass:.32,material:P.mats.object,position:cv(x,py,z),linearDamping:.06,angularDamping:.04});
     const q=new CANNON.Quaternion();q.setFromEuler(0,0,Math.PI/2);body.addShape(new CANNON.Cylinder(rad,rad,len,12),cv(),q);r=Math.max(rad,len/2);
   }else if(type==="plank"){
-    dynamic=true;const hx=Math.max(.75,r*1.35),hy=.09,hz=.30,py=y??.22;
+    dynamic=true;const hx=Math.max(.75,r*1.35),hy=.09,hz=.30,py=(y !== null && y !== undefined) ? y : .22;
     mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat(type));body=new CANNON.Body({mass:.28,material:P.mats.object,shape:new CANNON.Box(cv(hx,hy,hz)),position:cv(x,py,z),linearDamping:.08,angularDamping:.08});r=hx;meta={hx,hz,hy,top:py+hy};
   }else{
-    const rad=r,py=y??rad;mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,18,12),mat(type));body=new CANNON.Body({mass:0,material:P.mats.object,shape:new CANNON.Sphere(rad),position:cv(x,py,z)});
+    const rad=r,py=(y !== null && y !== undefined) ? y : rad;mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,18,12),mat(type));body=new CANNON.Body({mass:0,material:P.mats.object,shape:new CANNON.Sphere(rad),position:cv(x,py,z)});
   }
   mesh.position.copy(body.position);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
   body.collisionFilterGroup=dynamic?P.GROUP.PROP:P.GROUP.ENV;body.collisionFilterMask=dynamic?(P.GROUP.ENV|P.GROUP.PROP|P.GROUP.CREATURE):(P.GROUP.CREATURE|P.GROUP.PROP);
