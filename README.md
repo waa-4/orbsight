@@ -695,3 +695,40 @@ Severe impossible joint angles are still corrected immediately.
 
 This keeps the anti-fold safety system while greatly reducing the tiny visible leg
 "teleportation" that could interfere with locomotion.
+
+
+# v0.7.2 — No-Snap Legs
+
+This patch changes the anti-fold system so normal motion is no longer interrupted by repeated
+leg reconstruction.
+
+## The problem
+v0.7.1 finally moved well, but the safety validator still had one very visible behavior:
+when a leg crossed a limit or overlapped for long enough, the entire leg was rebuilt at its
+neutral pose. That looked like the foot "teleported back" and could erase useful movement.
+
+## New anatomy system
+Routine corrections are now continuous:
+
+- joints near/outside their safe range receive angular-velocity correction
+- limbs entering the shell are pushed outward with velocity impulses
+- overlapping legs separate with opposing velocity impulses
+- none of those operations change the limb position directly
+
+So a leg can swing, lift, climb, drag, stumble, and recover while keeping the motion it already had.
+
+## Catastrophic reset
+Full leg reconstruction still exists, but only as a last resort for:
+- NaN / invalid joint state
+- extremely far-out joint angle
+- sustained shell penetration lasting about a second
+
+Even then, the fallback tries to preserve the leg's current side/front direction instead of
+returning it to the exact spawn pose.
+
+The UI now separates:
+- `Catastrophic resets`
+- `Soft anatomy assists`
+
+A moving Orbsight should accumulate soft assists without visible snapping.
+Catastrophic resets should normally stay at zero.
