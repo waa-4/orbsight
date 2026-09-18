@@ -1,11 +1,14 @@
 import * as THREE from "three";
 import {OrbitControls} from "three/addons/controls/OrbitControls.js";
-import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,enforceAnatomy,syncBody,destroyBody} from "./physics.js";
-import {setupWorld,addObject,resetMap,updateWorld,clearObjects} from "./world.js";
-import {attachMind,updateMind,cleanupMind} from "./mind.js";
+import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,enforceAnatomy,syncBody,destroyBody} from "./physics.js?v=0.10.1";
+import {setupWorld,addObject,resetMap,updateWorld,clearObjects} from "./world.js?v=0.10.1";
+import {attachMind,updateMind,cleanupMind} from "./mind.js?v=0.10.1";
 
-const BUILD="0.10-modular-joint-rebuild-2026-09-18";
+const BUILD="0.10.1-bootstrap-fix-2026-09-18";
 const $=id=>document.getElementById(id);
+$("status").textContent="v0.10.1 main.js loaded — initializing…";
+window.addEventListener("error",e=>{if(window.__orbBootError)window.__orbBootError((e.error&&e.error.stack)||e.message||String(e.error||e))});
+window.addEventListener("unhandledrejection",e=>{if(window.__orbBootError)window.__orbBootError((e.reason&&e.reason.stack)||String(e.reason))});
 const canvas=$("c"),renderer=new THREE.WebGLRenderer({canvas,antialias:true});
 renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1016);scene.fog=new THREE.Fog(0x0b1016,38,92);
@@ -42,7 +45,14 @@ $("addObject").addEventListener("click",()=>addObject(app,$("objectType").value,
 $("randomObject").addEventListener("click",()=>addObject(app,$("objectType").value,(Math.random()-.5)*55,(Math.random()-.5)*55,1));
 window.addEventListener("resize",resize);
 
-reset();$("status").textContent="v0.10 modular engine running";
+try{
+  $("status").textContent="v0.10.1 building world…";
+  reset();
+  $("status").textContent="v0.10.1 modular engine running";
+}catch(e){
+  if(window.__orbBootError)window.__orbBootError("Startup failed while building the world:\n\n"+(e&&e.stack?e.stack:String(e)));
+  throw e;
+}
 const clock=new THREE.Clock(),FIXED=1/180;let acc=0,uiTimer=0;
 function frame(){
   requestAnimationFrame(frame);const realDt=Math.min(.05,clock.getDelta());resize();

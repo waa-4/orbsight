@@ -36,3 +36,28 @@ The physics loop uses a fixed 1/180 second step.
 - 0.5x–15x simulation speed
 
 This rebuild favors a smaller, understandable engine over continuing to patch one enormous `index.html`.
+
+
+## v0.10.1 bootstrap fix
+
+v0.10 could appear permanently stuck on `starting v0.10…` when `main.js` never loaded.
+The HTML was static while the real engine lived in external ES-module files, so a module-load
+failure occurred before the old JavaScript error panel existed.
+
+v0.10.1:
+- catches `main.js` import failures directly from `index.html`
+- catches unhandled module promises and startup exceptions
+- reports which phase is loading
+- cache-busts the local engine modules so GitHub Pages does not mix old/new JS files
+- explicitly detects `file://`
+
+Important: a modular ES-module build must be served over HTTP/HTTPS. Double-clicking
+`index.html` directly from Windows uses `file://`, and browsers normally block local ES-module
+imports. GitHub Pages works because it serves the five files over HTTPS.
+
+Keep these together:
+- index.html
+- main.js
+- physics.js
+- mind.js
+- world.js

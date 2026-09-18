@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.10 — Modular Joint Rebuild</title>
+<title>Orbsight v0.10.1 — Bootstrap Fix</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -34,7 +34,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <div id="app">
   <div id="view"><canvas id="c"></canvas><div id="status">starting v0.10…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.10</span></h1>
+    <h1>Orbsight <span>v0.10.1</span></h1>
     <div class="small">Five-file engine rebuild. index.html only contains UI/CSS; physics, mind, world, and bootstrap code are separate.</div>
 
     <div class="sec"><h3>Simulation</h3>
@@ -86,6 +86,31 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
     <div class="sec"><h3>Events</h3><div id="events" class="small">—</div></div>
   </aside>
 </div>
-<script type="module" src="./main.js"></script>
+<script>
+(function(){
+  const status=document.getElementById("status"),err=document.getElementById("err");
+  window.__orbBootError=function(msg){
+    status.textContent="v0.10.1 failed to start — see panel";
+    err.hidden=false;err.textContent=msg;
+  };
+  window.addEventListener("error",e=>window.__orbBootError((e.error&&e.error.stack)||e.message||String(e.error||e)));
+  window.addEventListener("unhandledrejection",e=>window.__orbBootError((e.reason&&e.reason.stack)||String(e.reason)));
+  if(location.protocol==="file:"){
+    window.__orbBootError(
+      "This v0.10+ modular build cannot be run by double-clicking index.html (file://).\n\n"+
+      "Because the engine is split across ES-module files, the browser blocks those local module imports for security.\n\n"+
+      "Use GitHub Pages / another web server, or start a local HTTP server in this folder.\n\n"+
+      "All five engine files must stay together:\n"+
+      "index.html\nmain.js\nphysics.js\nmind.js\nworld.js"
+    );
+    return;
+  }
+  status.textContent="loading v0.10.1 modules…";
+  import("./main.js?v=0.10.1").catch(e=>window.__orbBootError(
+    "main.js could not load or initialize.\n\n"+(e&&e.stack?e.stack:String(e))+
+    "\n\nMake sure main.js, physics.js, mind.js, and world.js are beside index.html."
+  ));
+})();
+</script>
 </body>
 </html>

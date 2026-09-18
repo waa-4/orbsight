@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import {tryGrip,releaseGrip,updateGrips} from "./physics.js";
-import {nearby} from "./world.js";
+import {tryGrip,releaseGrip,updateGrips} from "./physics.js?v=0.10.1";
+import {nearby} from "./world.js?v=0.10.1";
 
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
