@@ -882,3 +882,49 @@ Communication is intentionally preset-based; it is not generated language learni
 
 ## Persistence
 Sleep consolidation result and smooth target motor policy are included in saves.
+
+
+# v0.9.2 — Anti-Fold No-Snap
+
+v0.9.1 removed nearly all positional leg resets, but that exposed a new failure: the continuous
+limit forces were too gentle to stop a sufficiently strong learned movement or climbing grip
+from folding a leg before the correction caught up.
+
+## Hard-stop muscle veto
+Every joint now has an anatomical barrier zone.
+
+Near a limit:
+- a muscle command that would push farther into the stop is overridden
+- motor force increases toward the safe direction
+- relative joint velocity is strongly damped
+- the correction still acts through velocity/torque, never by teleporting the limb
+
+## Same-leg anti-fold geometry
+Connected parts of a single leg intentionally do not collide in Cannon, because full
+self-collision caused solver instability in older versions.
+
+v0.9.2 therefore adds continuous anatomical spacing between non-neighboring parts:
+- upper leg vs foot
+- hip mount vs foot
+- upper leg vs ankle mount
+- lower leg / ankle / foot vs the central shell core
+
+This prevents a leg from collapsing into itself while retaining free flexion.
+
+## Inter-leg separation
+The continuous separator now checks more pairs, including upper-leg segments.
+
+## Safer climbing grips
+A grip automatically releases when any joint approaches an anatomical stop.
+Grip force and maximum hold duration are also reduced so a foot cannot wrench the rest of the
+skeleton into a folded configuration.
+
+## Knee range
+Maximum knee flexion is reduced slightly from 1.48 rad to 1.38 rad. This still allows a deep
+tuck for climbing while leaving more safety margin before the leg can collapse.
+
+## No routine teleport
+Finite joint states are still never reconstructed.
+The emergency positional reset remains reserved only for an invalid/non-finite physics state.
+
+A new `Fold blocks` counter shows how often the continuous anatomy system intervenes.
