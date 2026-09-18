@@ -291,3 +291,51 @@ The sensor systems were working, but the physical skeleton could still:
 
 These are low-level biomechanical protections. They do not select destinations,
 objects, headings, or gait phase for the Orbsight.
+
+
+# v0.4.2 — Leg Separation Patch
+
+This patch fixes a deeper physics issue from v0.4/v0.4.1:
+
+Previously, all creature body parts had a collision mask that only included the environment.
+That meant **legs did not physically collide with the shell or with other legs**.
+The visual anti-fold reflex could push them apart somewhat, but Cannon itself still allowed
+two separate legs to occupy the same space.
+
+## New collision anatomy
+
+Collision layers are now split into:
+- shell
+- front-left leg
+- front-right leg
+- back-left leg
+- back-right leg
+- environment
+
+Each leg:
+- collides with the floor/world
+- collides with the shell
+- collides with all three other legs
+- does not collide with its own connected segments
+
+The shell also collides with other shells and all leg groups.
+
+Connected hinge pairs still use `collideConnected:false`, so the joints themselves are not
+fighting their own constraint.
+
+## Anti-crossing ligaments
+
+A low-level anatomical reflex now also:
+- keeps limb segments out of the solid center of the shell
+- prevents left legs from fully crossing to the right side and vice versa
+- allows a small amount of natural crossover for gait
+- does not choose heading, target, or gait phase
+
+## Physics tuning
+
+- solver iterations increased from 14 to 20
+- body-on-body friction reduced so touching legs slide apart instead of sticking
+- existing stance, vestibular, proprioceptive, persistence, and learning systems are retained
+
+A new `Leg separation` readout shows the approximate minimum distance between lower
+limb/foot bodies of different legs.

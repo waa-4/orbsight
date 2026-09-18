@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0d12">
-<title>Orbsight v0.4.1 — Stability Patch</title>
+<title>Orbsight v0.4.2 — Leg Separation</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d12;--p:#141821;--p2:#0f131b;--t:#f5f7fb;--m:#9aa3b2;--l:#252c39;--a:#7b8cff;--good:#62cf79;--bad:#e15c5c;--warn:#e4b95c}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--t);font-family:Inter,system-ui,Arial,sans-serif}body{overflow-x:hidden}
@@ -16,13 +16,13 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/","cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"}}</script>
 </head>
 <body><main>
-<header class="top"><div><h1>Orbsight <span>v0.4.1</span></h1><p>Sensorimotor learning with a repaired stance, anti-fold anatomy, and body-clearance reflexes.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button><button id="reset">Reset world</button><button id="follow">Follow selected: ON</button><button id="reloadBuild">Reload build</button></div></header>
+<header class="top"><div><h1>Orbsight <span>v0.4.2</span></h1><p>Sensorimotor learning with real inter-leg collision, shell collision, and anti-crossing anatomy.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button><button id="reset">Reset world</button><button id="follow">Follow selected: ON</button><button id="reloadBuild">Reload build</button></div></header>
 <div id="err" class="err" hidden><b>Orbsight could not start.</b><div id="errText"></div></div>
 <section class="layout">
 <div class="view"><canvas id="world"></canvas><div id="status" class="chip">loading rigid-body physics…</div><div class="hint">Drag to orbit • wheel/pinch to zoom • click an Orbsight shell to select it</div></div>
 <aside class="panel">
 <h2>Orbsight lab</h2>
-<div class="sec"><div class="proof"><div><strong>Brain:</strong> <span id="brainBuild">—</span></div><div><strong>Physics:</strong> <span id="physicsBuild">—</span></div><div><strong>Runtime:</strong> <span id="runtimeBuild">—</span></div></div><div class="small" style="margin-top:6px">If these values say 0.4.1 / stability, this build is definitely running. This ZIP contains no old JavaScript file that can override it.</div></div>
+<div class="sec"><div class="proof"><div><strong>Brain:</strong> <span id="brainBuild">—</span></div><div><strong>Physics:</strong> <span id="physicsBuild">—</span></div><div><strong>Runtime:</strong> <span id="runtimeBuild">—</span></div></div><div class="small" style="margin-top:6px">If these values say 0.4.2 / leg-separation, this build is definitely running. This ZIP contains no old JavaScript file that can override it.</div></div>
 <div class="sec">
 <h3>Persistence</h3>
 <div class="kv"><span>Autosave</span><b>ON</b><span>Save status</span><b id="saveStatus">not saved yet</b><span>Save slot</span><b>local browser</b></div>
@@ -30,7 +30,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 </div>
 <div class="sec"><h3>Population <span id="popCount" class="small"></span></h3><div class="grid2"><button id="addOrb">+ Add Orbsight</button><button id="removeOrb">Remove selected</button></div><div class="orblist" id="orbList"></div><div class="small">Maximum 20. Each creature now has 21 physical bodies and 20 articulated joints, so very large populations may run slower.</div></div>
 <div class="sec"><h3>Add world object</h3><div class="grid3"><div><label>Type</label><select id="objectType"><option value="food">Food</option><option value="danger">Danger</option><option value="wall">Block</option><option value="toy">Toy</option><option value="marker">Marker</option></select></div><div><label>X</label><input id="objX" type="number" min="-20" max="20" step=".5" value="0"></div><div><label>Z</label><input id="objZ" type="number" min="-20" max="20" step=".5" value="0"></div></div><div class="grid2" style="margin-top:7px"><button id="addObject">Add object</button><button id="randomObject">Add randomly</button></div><div class="small" id="objCount"></div></div>
-<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b></div></div>
+<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b><span>Leg separation</span><b id="separationT">—</b></div></div>
 <div class="sec"><h3>Vestibular system</h3>
 <div class="kv"><span>Tilt</span><b id="vestTilt">—</b><span>Angular speed</span><b id="vestSpin">—</b><span>Acceleration</span><b id="vestAccel">—</b><span>Falling</span><b id="vestFall">—</b></div>
 <div class="small">Inner-ear-like sensors report orientation and motion to the brain. They do not decide actions.</div>
@@ -54,9 +54,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 
-const BUILD='0.4.1-stability-2026-09-17';
-const BRAIN='0.4.1 sensorimotor-brain';
-const PHYSICS='cannon-es stabilized biomechanics + persistence';
+const BUILD='0.4.2-leg-separation-2026-09-17';
+const BRAIN='0.4.2 sensorimotor-brain';
+const PHYSICS='cannon-es self-colliding biomechanics + persistence';
 const SAVE_KEY='orbsight-v0.3.5-save';
 const SAVE_VERSION=3;
 let saveTimer=0;
@@ -73,12 +73,15 @@ const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixe
 const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=4;controls.maxDistance=34;
 scene.add(new THREE.HemisphereLight(0xd8e2ff,0x243328,2.15));const sun=new THREE.DirectionalLight(0xffffff,2.35);sun.position.set(9,14,7);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
 
-const world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.82,0)});world.allowSleep=true;world.solver.iterations=14;world.solver.tolerance=.001;world.broadphase=new CANNON.SAPBroadphase(world);
-const ENV=1,CREATURE=2;
+const world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.82,0)});world.allowSleep=true;world.solver.iterations=20;world.solver.tolerance=.001;world.broadphase=new CANNON.SAPBroadphase(world);
+const ENV=1,SHELL=2,LEG0=4,LEG1=8,LEG2=16,LEG3=32;
+const LEG_GROUPS=[LEG0,LEG1,LEG2,LEG3],ALL_LEGS=LEG0|LEG1|LEG2|LEG3;
+const CREATURE=SHELL|ALL_LEGS;
 const groundMat=new CANNON.Material('ground'),bodyMat=new CANNON.Material('body'),footMat=new CANNON.Material('foot'),objectMat=new CANNON.Material('object');
 world.defaultContactMaterial.friction=.45;world.defaultContactMaterial.restitution=0;
 world.addContactMaterial(new CANNON.ContactMaterial(footMat,groundMat,{friction:1.35,restitution:0,contactEquationStiffness:1.2e7,contactEquationRelaxation:3}));
 world.addContactMaterial(new CANNON.ContactMaterial(bodyMat,groundMat,{friction:.55,restitution:0}));world.addContactMaterial(new CANNON.ContactMaterial(bodyMat,objectMat,{friction:.55,restitution:0}));world.addContactMaterial(new CANNON.ContactMaterial(footMat,objectMat,{friction:.9,restitution:0}));
+world.addContactMaterial(new CANNON.ContactMaterial(bodyMat,bodyMat,{friction:.10,restitution:0,contactEquationStiffness:8e6,contactEquationRelaxation:4}));
 const groundBody=new CANNON.Body({mass:0,material:groundMat});groundBody.addShape(new CANNON.Plane());groundBody.quaternion.setFromEuler(-Math.PI/2,0,0);groundBody.collisionFilterGroup=ENV;groundBody.collisionFilterMask=CREATURE;world.addBody(groundBody);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,48),new THREE.MeshStandardMaterial({color:0x202a27,roughness:1}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);const grid=new THREE.GridHelper(48,48,0x34443f,0x27342f);grid.position.y=.006;scene.add(grid);
 
@@ -143,7 +146,10 @@ function sanitizeGenome(g){
 }
 
 function cvec(x=0,y=0,z=0){return new CANNON.Vec3(x,y,z)}
-function makePart(shape,mass,mat,pos){const b=new CANNON.Body({mass,material:mat,position:cvec(pos.x,pos.y,pos.z),linearDamping:.05,angularDamping:.22,allowSleep:false});b.addShape(shape);b.collisionFilterGroup=CREATURE;b.collisionFilterMask=ENV;world.addBody(b);return b}
+function makePart(shape,mass,mat,pos,group=SHELL,mask=ENV|CREATURE){
+ const b=new CANNON.Body({mass,material:mat,position:cvec(pos.x,pos.y,pos.z),linearDamping:.05,angularDamping:.22,allowSleep:false});
+ b.addShape(shape);b.collisionFilterGroup=group;b.collisionFilterMask=mask;world.addBody(b);return b
+}
 function makeHinge(a,b,pA,pB,force,axisArr=[1,0,0]){
   const axisA=cvec(...axisArr),axisB=cvec(...axisArr);
   const ref=(Math.abs(axisArr[1])<.8)?cvec(0,1,0):cvec(1,0,0);
@@ -231,7 +237,7 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
 
  // Lighter shell: still much larger than its legs, but easier for tiny limbs to support.
  const shellY=1.32;
- const shellBody=makePart(new CANNON.Sphere(.62),.58,bodyMat,{x,y:shellY,z});
+ const shellBody=makePart(new CANNON.Sphere(.62),.58,bodyMat,{x,y:shellY,z},SHELL,ENV|SHELL|ALL_LEGS);
  shellBody.angularDamping=.36;shellBody.linearDamping=.08;
  const shellMesh=new THREE.Mesh(geo.shell,shellMat);shellMesh.castShadow=true;scene.add(shellMesh);
 
@@ -246,14 +252,18 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
 
  defs.forEach(([side,front],i)=>{
    const hx=side*.53,hz=front*.36,hipWorldY=shellY+hipY;
+   // Parts of one leg do not collide with each other, but they DO collide with
+   // the shell and all three other legs. This prevents legs occupying the same space.
+   const legGroup=LEG_GROUPS[i];
+   const legMask=ENV|SHELL|(ALL_LEGS & ~legGroup);
    const ankleY=hipWorldY-L1-L2;
 
    // Extra hip mount provides a real lateral/splay degree of freedom.
-   const hipMountBody=makePart(new CANNON.Sphere(.065),.028,bodyMat,{x:x+hx,y:hipWorldY,z:z+hz});
-   const upperBody=makePart(new CANNON.Box(cvec(.052,L1/2,.052)),.065,bodyMat,{x:x+hx,y:hipWorldY-L1/2,z:z+hz});
-   const lowerBody=makePart(new CANNON.Box(cvec(.048,L2/2,.048)),.052,bodyMat,{x:x+hx,y:hipWorldY-L1-L2/2,z:z+hz});
-   const ankleMountBody=makePart(new CANNON.Sphere(.055),.022,bodyMat,{x:x+hx,y:ankleY,z:z+hz});
-   const footBody=makePart(new CANNON.Box(cvec(.085,footHalfY,.17)),.042,footMat,{x:x+hx,y:ankleY-.02-footHalfY,z:z+hz+.12});
+   const hipMountBody=makePart(new CANNON.Sphere(.065),.028,bodyMat,{x:x+hx,y:hipWorldY,z:z+hz},legGroup,legMask);
+   const upperBody=makePart(new CANNON.Box(cvec(.052,L1/2,.052)),.065,bodyMat,{x:x+hx,y:hipWorldY-L1/2,z:z+hz},legGroup,legMask);
+   const lowerBody=makePart(new CANNON.Box(cvec(.048,L2/2,.048)),.052,bodyMat,{x:x+hx,y:hipWorldY-L1-L2/2,z:z+hz},legGroup,legMask);
+   const ankleMountBody=makePart(new CANNON.Sphere(.055),.022,bodyMat,{x:x+hx,y:ankleY,z:z+hz},legGroup,legMask);
+   const footBody=makePart(new CANNON.Box(cvec(.085,footHalfY,.17)),.042,footMat,{x:x+hx,y:ankleY-.02-footHalfY,z:z+hz+.12},legGroup,legMask);
    // Limbs are articulated, not floppy ropes. Extra local damping removes the
    // uncontrolled twist that made legs corkscrew around the shell in v0.4.
    hipMountBody.angularDamping=.48;
@@ -308,7 +318,7 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
  removed:false};
 
  parts.forEach(({body})=>body.addEventListener('collide',ev=>onCreatureCollision(o,ev.body)));
- orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.4.1 stance stabilizer + anti-fold skeleton online','hot');logEvent(o,'motor deadlock protection online','hot');
+ orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.4.2 inter-leg collision + anti-crossing skeleton online','hot');logEvent(o,'motor deadlock protection online','hot');
  if(!selected)selectOrb(o);refreshOrbList();return o
 }
 function destroyOrb(o){o.removed=true;o.constraints.forEach(c=>world.removeConstraint(c));o.parts.forEach(({body,mesh})=>{world.removeBody(body);scene.remove(mesh)});scene.remove(o.eyeRoot);const i=orbs.indexOf(o);if(i>=0)orbs.splice(i,1);if(selected===o)selectOrb(orbs[0]||null);refreshOrbList()}
@@ -419,19 +429,38 @@ function driveGait(o,dt){
    }else if(leg.health.limitHits>.55)leg.health.state='strained';
    else leg.health.state='normal';
 
-   // Anti-shell-fold: if a limb segment gets pushed unnaturally close to the shell
-   // center, gently push it radially outward. This is skeletal collision protection,
-   // not a movement command.
-   for(const body of [leg.upperBody,leg.lowerBody,leg.ankleMountBody]){
-     const dx=body.position.x-o.shellBody.position.x;
-     const dz=body.position.z-o.shellBody.position.z;
-     const horiz=Math.hypot(dx,dz);
-     const minR=.34;
-     if(horiz<minR){
-       const inv=1/Math.max(.001,horiz);
-       const push=(minR-horiz)*3.2;
-       body.velocity.x+=dx*inv*push*dt*60;
-       body.velocity.z+=dz*inv*push*dt*60;
+   // Ligament / anti-crossing reflex.
+   // Cannon now gives different legs real collision, while this local reflex stops
+   // a limb from being numerically forced through the shell or far across its root side.
+   const invQ=o.shellBody.quaternion.inverse();
+   for(const body of [leg.upperBody,leg.lowerBody,leg.ankleMountBody,leg.footBody]){
+     const worldDelta=cvec(
+       body.position.x-o.shellBody.position.x,
+       body.position.y-o.shellBody.position.y,
+       body.position.z-o.shellBody.position.z
+     );
+     const local=cvec();invQ.vmult(worldDelta,local);
+
+     // Keep limb outside the solid central core of the orb.
+     const radial=Math.hypot(local.x,local.z);
+     const minR=(body===leg.footBody)?.38:.31;
+     if(radial<minR){
+       const nx=local.x/(radial||1),nz=local.z/(radial||1);
+       const localPush=cvec(nx*(minR-radial)*7.0,0,nz*(minR-radial)*7.0);
+       const worldPush=cvec();o.shellBody.quaternion.vmult(localPush,worldPush);
+       body.velocity.x+=worldPush.x*dt*60;
+       body.velocity.z+=worldPush.z*dt*60;
+     }
+
+     // Left legs remain primarily left and right legs remain primarily right.
+     // A small crossover is allowed for normal gait, but not a full leg swap/merge.
+     const sideDepth=local.x*leg.side;
+     if(sideDepth<.06){
+       const localPush=cvec(leg.side*(.06-sideDepth)*8.0,0,0);
+       const worldPush=cvec();o.shellBody.quaternion.vmult(localPush,worldPush);
+       body.velocity.x+=worldPush.x*dt*60;
+       body.velocity.y+=worldPush.y*dt*60;
+       body.velocity.z+=worldPush.z*dt*60;
      }
    }
 
@@ -463,6 +492,17 @@ function driveGait(o,dt){
    o.motorStallTimer=.8;
    logEvent(o,'persistent stall — muscle locks cleared','hot');
  }
+}
+
+function legSeparationMetric(o){
+ let min=99;
+ for(let i=0;i<o.legs.length;i++)for(let j=i+1;j<o.legs.length;j++){
+   for(const a of [o.legs[i].lowerBody,o.legs[i].footBody])
+   for(const b of [o.legs[j].lowerBody,o.legs[j].footBody]){
+     const d=a.position.distanceTo(b.position);if(d<min)min=d;
+   }
+ }
+ return min===99?0:min;
 }
 
 function updateBodySenses(o,dt){
@@ -595,7 +635,7 @@ function updateOrb(o,dt){
  driveGait(o,dt);checkStuck(o,dt);checkFall(o,dt);interactNearby(o);evaluateMotor(o);updateEye(o,dt)
 }
 function refreshOrbList(){$('popCount').textContent=`(${orbs.length}/20)`;$('orbList').innerHTML='';orbs.forEach(o=>{const row=document.createElement('div');row.className='orbrow'+(o===selected?' selected':'');const s=document.createElement('span');s.textContent=`${o.name} • G${o.motor.generation}`;s.style.fontSize='12px';const b=document.createElement('button');b.textContent='Select';b.addEventListener('click',()=>selectOrb(o));row.append(s,b);$('orbList').append(row)});$('addOrb').disabled=orbs.length>=20;$('removeOrb').disabled=orbs.length<=1}
-function refreshUI(){if(!selected)return;const o=selected,upr=uprightValue(o);$('nameT').textContent=o.name;$('thoughtT').textContent=o.thought;$('genT').textContent=o.motor.generation;$('stageT').textContent=o.development.stageName;$('scoreT').textContent=o.motor.bestScore<=-900?'learning…':o.motor.bestScore.toFixed(2);$('uprightT').textContent=pct(upr);$('massT').textContent=o.shellBody.mass.toFixed(2)+' shell';$('motorOutT').textContent=Math.round((o.motorOutput||0)*100)+'%';$('motorStateT').textContent=(o.motorStallTimer||0)>1.5?'STALLED / BOOSTING':'active';$('feetT').textContent=`${o.lastContactCount}/4`;$('bodyStateT').textContent=o.recoveryMode?'FALLEN / recovering':upr>.72?'upright':'unstable';$('clearanceT').textContent=((o.bodyClearance||0)*100).toFixed(0)+' cm';$('supportT').textContent=Math.round((o.supportReflex||0)*100)+'%';for(const[k,v]of[['energy',o.energy],['hunger',o.hunger],['safety',o.safety]]){$(k+'T').textContent=pct(v);$(k+'B').style.width=pct(v)}$('visionT').textContent=o.vision;$('visionB').style.width=pct(o.visionStrength);$('smellT').textContent=o.smell;$('smellB').style.width=pct(o.smellStrength);$('vestTilt').textContent=(o.vestibular.tilt*180/Math.PI).toFixed(1)+'°';$('vestSpin').textContent=o.vestibular.angularSpeed.toFixed(2)+' rad/s';$('vestAccel').textContent=o.vestibular.accel.toFixed(2)+' m/s²';$('vestFall').textContent=o.vestibular.falling?'YES':'no';$('propJoint').textContent=Math.round(o.proprio.jointAwareness*100)+'%';$('propContact').textContent=o.proprio.contactCount+'/4';$('propLoad').textContent=Math.round(o.proprio.loadSymmetry*100)+'%';$('propError').textContent=(o.proprio.motorError||0).toFixed(2);$('propLegs').innerHTML=o.proprio.legs.map((l,i)=>{const n=['FL','FR','BL','BR'][i];return `<div><b>${n}</b> knee ${(l.angles.knee*180/Math.PI).toFixed(0)}° • ankle ${(l.angles.ankle*180/Math.PI).toFixed(0)}° • ${l.contact?'ground':'air'} • load ${Math.round(l.load*100)}%</div>`}).join('');$('personalityBadges').innerHTML=Object.entries(o.personality).map(([k,v])=>`<span class="badge"><span class="dot" style="background:hsl(${Math.round(v*120)} 60% 60%)"></span>${k} ${Math.round(v*100)}</span>`).join('');for(const t of['Food','Toy','Marker','Danger','Wall'])$('interest'+t).textContent=(o.interests[t.toLowerCase()]??0).toFixed(2);$('strengthList').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),s=leg.strengths;return `<div style="margin:3px 0"><b>${name}</b> spread ${Math.round(s.abduct*100)}% • hip ${Math.round(s.hip*100)}% • knee ${Math.round(s.knee*100)}% • ankle ${Math.round(s.ankle*100)}% • foot ${Math.round(s.foot*100)}%</div>`}).join('');$('limbHealth').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),st=leg.health.state,cls=st==='normal'?'limb-ok':st==='strained'?'limb-warn':'limb-bad';return `<div class="${cls}"><b>${name}</b> ${st}</div>`}).join('');$('brainLog').innerHTML=o.events.map(e=>`<div class="${e.kind}">[${e.t.toFixed(1)}] ${e.text}</div>`).join('')||'<div>no events yet</div>';$('status').textContent=`${o.name}: ${o.thought}`}
+function refreshUI(){if(!selected)return;const o=selected,upr=uprightValue(o);$('nameT').textContent=o.name;$('thoughtT').textContent=o.thought;$('genT').textContent=o.motor.generation;$('stageT').textContent=o.development.stageName;$('scoreT').textContent=o.motor.bestScore<=-900?'learning…':o.motor.bestScore.toFixed(2);$('uprightT').textContent=pct(upr);$('massT').textContent=o.shellBody.mass.toFixed(2)+' shell';$('motorOutT').textContent=Math.round((o.motorOutput||0)*100)+'%';$('motorStateT').textContent=(o.motorStallTimer||0)>1.5?'STALLED / BOOSTING':'active';$('feetT').textContent=`${o.lastContactCount}/4`;$('bodyStateT').textContent=o.recoveryMode?'FALLEN / recovering':upr>.72?'upright':'unstable';$('clearanceT').textContent=((o.bodyClearance||0)*100).toFixed(0)+' cm';$('supportT').textContent=Math.round((o.supportReflex||0)*100)+'%';$('separationT').textContent=(legSeparationMetric(o)*100).toFixed(0)+' cm';for(const[k,v]of[['energy',o.energy],['hunger',o.hunger],['safety',o.safety]]){$(k+'T').textContent=pct(v);$(k+'B').style.width=pct(v)}$('visionT').textContent=o.vision;$('visionB').style.width=pct(o.visionStrength);$('smellT').textContent=o.smell;$('smellB').style.width=pct(o.smellStrength);$('vestTilt').textContent=(o.vestibular.tilt*180/Math.PI).toFixed(1)+'°';$('vestSpin').textContent=o.vestibular.angularSpeed.toFixed(2)+' rad/s';$('vestAccel').textContent=o.vestibular.accel.toFixed(2)+' m/s²';$('vestFall').textContent=o.vestibular.falling?'YES':'no';$('propJoint').textContent=Math.round(o.proprio.jointAwareness*100)+'%';$('propContact').textContent=o.proprio.contactCount+'/4';$('propLoad').textContent=Math.round(o.proprio.loadSymmetry*100)+'%';$('propError').textContent=(o.proprio.motorError||0).toFixed(2);$('propLegs').innerHTML=o.proprio.legs.map((l,i)=>{const n=['FL','FR','BL','BR'][i];return `<div><b>${n}</b> knee ${(l.angles.knee*180/Math.PI).toFixed(0)}° • ankle ${(l.angles.ankle*180/Math.PI).toFixed(0)}° • ${l.contact?'ground':'air'} • load ${Math.round(l.load*100)}%</div>`}).join('');$('personalityBadges').innerHTML=Object.entries(o.personality).map(([k,v])=>`<span class="badge"><span class="dot" style="background:hsl(${Math.round(v*120)} 60% 60%)"></span>${k} ${Math.round(v*100)}</span>`).join('');for(const t of['Food','Toy','Marker','Danger','Wall'])$('interest'+t).textContent=(o.interests[t.toLowerCase()]??0).toFixed(2);$('strengthList').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),s=leg.strengths;return `<div style="margin:3px 0"><b>${name}</b> spread ${Math.round(s.abduct*100)}% • hip ${Math.round(s.hip*100)}% • knee ${Math.round(s.knee*100)}% • ankle ${Math.round(s.ankle*100)}% • foot ${Math.round(s.foot*100)}%</div>`}).join('');$('limbHealth').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),st=leg.health.state,cls=st==='normal'?'limb-ok':st==='strained'?'limb-warn':'limb-bad';return `<div class="${cls}"><b>${name}</b> ${st}</div>`}).join('');$('brainLog').innerHTML=o.events.map(e=>`<div class="${e.kind}">[${e.t.toFixed(1)}] ${e.text}</div>`).join('')||'<div>no events yet</div>';$('status').textContent=`${o.name}: ${o.thought}`}
 function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,r.width),h=Math.max(1,r.height),pr=renderer.getPixelRatio();if(canvas.width!==Math.floor(w*pr)||canvas.height!==Math.floor(h*pr)){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}}
 function clearWorld(){orbs.slice().forEach(destroyOrb);things.forEach(removeThing);things.length=0;selected=null;nextOrbId=1;nextThingId=1}
 
