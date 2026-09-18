@@ -645,3 +645,53 @@ and motor learning.
 
 Dynamic object position and velocity are saved. Existing Orbsight personality, memory, motor
 policy, muscle strength, fatigue, and developmental state continue to persist.
+
+
+# v0.7.1 — Climb + Relax
+
+## Freer legs
+
+The previous relaxed controller still lived inside narrow joint ranges, so a leg could wobble
+but could not really fold upward enough to climb.
+
+v0.7.1 expands the usable ranges substantially:
+- hip swing: ±1.05 rad
+- knee flexion: up to 1.48 rad
+- ankle pitch: -0.72 to +0.78 rad
+- hip spread and foot roll also receive more room
+
+Airborne knees have a slightly stronger passive bend, so an unloaded leg naturally tucks instead
+of hanging like a straight stilt.
+
+The learned policy can now explore much larger hip and knee excursions.
+
+## Climbing
+
+Orbsights receive a small `climbOpportunity` sensor for nearby raised solid surfaces.
+
+It does not issue a climb command. It only tells the motor system that a reachable step exists.
+When a step is nearby, the controller is allowed more hip/knee excursion from its own learned
+output.
+
+Motor learning also gives a small reward for genuine upward body progress while remaining stable.
+
+Foot contact sensing now understands raised platforms instead of assuming every foot contact is
+at world Y=0.
+
+## Slower thinking
+
+The high-level decision loop now runs about every 2.2–6.6 seconds depending partly on patience,
+instead of roughly twice per second.
+
+Orbsights also usually keep their current target between thoughts rather than selecting a new
+interesting object each time.
+
+## Less leg snapping
+
+The hard skeleton validator no longer reconstructs a leg on the first small limit/overlap frame.
+
+Minor violations and overlaps must persist for roughly a quarter-second before correction.
+Severe impossible joint angles are still corrected immediately.
+
+This keeps the anti-fold safety system while greatly reducing the tiny visible leg
+"teleportation" that could interfere with locomotion.
