@@ -42,7 +42,7 @@ function makeRevolute(P,a,b,anchorA,anchorB,axis,min,max,name){
   j.setLimits(min,max);
   j.setContactsEnabled(false);
   j.configureMotorPosition(0,42,8.0);
-  return{name,joint:j,min,max,target:0,stiffness:18,damping:3.6}
+  return{name,joint:j,min,max,target:0,stiffness:18,damping:3.6,bodyA:a,bodyB:b,axisLocal:{x:axis.x,y:axis.y,z:axis.z}}
 }
 function relAngle(bodyA,bodyB,axis){
   const qa=bodyA.rotation(),qb=bodyB.rotation();
@@ -166,6 +166,23 @@ function applySupportReflex(o,commands){
   }
 }
 
+function worldAxis(body,axis){
+  const q=body.rotation();
+  const v=new THREE.Vector3(axis.x,axis.y,axis.z);
+  v.applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w));
+  if(v.lengthSq()>0)v.normalize();
+  return v
+}
+function applyJointActuator(info,current,target,activation,dt){
+  const err=target-current;
+  const impulse=clamp(err*activation*0.11,-0.018,0.018)*(dt*180);
+  if(Math.abs(impulse)<0.00001)return;
+  const ax=worldAxis(info.bodyA,info.axisLocal);
+  const t={x:ax.x*impulse,y:ax.y*impulse,z:ax.z*impulse};
+  info.bodyB.applyTorqueImpulse(t,true);
+  info.bodyA.applyTorqueImpulse({x:-t.x,y:-t.y,z:-t.z},true);
+}
+
 export function driveBody(P,o,commands,dt){
   applySupportReflex(o,commands);
   let activity=0;
@@ -175,10 +192,14 @@ export function driveBody(P,o,commands,dt){
       const info=leg.joints[name],lim=JOINT_LIMITS[name],target=clamp(cmd[name].target,lim[0],lim[1]);
       const activation=clamp(cmd[name].activation,0.02,1);
       // Rapier's actual limit is the final authority. The brain can request a target, but cannot exceed it.
-      const stiffness=34+activation*52,damping=7.0+activation*7.0;
-      info.joint.configureMotorPosition(target,stiffness,damping);
+      const stiffness=46+activation*74,damping=8.0+activation*10.0;
+      const current=leg.angles[name]||0;
+      const err=target-current;
+      const targetVel=clamp(err*7.5,-3.2,3.2);
+      info.joint.configureMotor(target,targetVel,stiffness,damping);
+      applyJointActuator(info,current,target,activation,dt);
       info.target=target;
-      activity+=Math.abs(target-(leg.angles[name]||0));
+      activity+=Math.abs(err);
     }
   }
   return clamp(activity/5)
@@ -195,7 +216,7 @@ export function settleBody(P,o){
     };
     for(const name of Object.keys(neutral)){
       const n=neutral[name];
-      leg.joints[name].joint.configureMotorPosition(n.target,48+n.activation*54,9.0+n.activation*5.0);
+      leg.joints[name].joint.configureMotor(n.target,0,62+n.activation*64,11.0+n.activation*6.0);
     }
   }
 }
@@ -205,6 +226,15 @@ export function syncBody(o){
   const p=o.shell.translation(),q=o.shell.rotation();
   o.eyeRoot.position.set(p.x,p.y+0.05,p.z+0.57);
   o.eyeRoot.quaternion.set(q.x,q.y,q.z,q.w);
+}
+
+export function animateEye(o,time){
+  const pupil=o.eyeRoot.children[1];
+  if(!pupil)return;
+  const phase=time*0.85+o.id*1.7;
+  pupil.position.x=Math.sin(phase)*0.085;
+  pupil.position.y=Math.sin(phase*0.63+1.1)*0.050;
+  pupil.position.z=0.275;
 }
 
 export function destroyBody(P,scene,o){

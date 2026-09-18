@@ -45,7 +45,7 @@ export function attachMind(app,o){
     babble:{timer:0,leg:0,joint:"knee",value:0,target:0},
     command:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,{target:0,activation:0.1}]))),
     bubble:bubbleSprite(app),thoughtTimer:rand(5,11),chatTimer:rand(7,15),decisionTimer:0,
-    sleep:{sleeping:false,time:0,lastGain:"—",cooldown:0}
+    sleep:{sleeping:false,time:0,lastGain:"—",cooldown:0},calibration:{done:false,phase:"settling"}
   }
 }
 function smoothPolicy(m,dt){
@@ -111,15 +111,41 @@ function evaluate(o,app){
   m.targetPolicy=mutate(m.targetPolicy,0.08-Math.min(0.045,m.generation*0.0007));m.generation++;m.denseAccum=0;m.trialTime=app.simTime;m.trialX=p.x;m.trialZ=p.z
 }
 
+function calibrationCommands(o,app){
+  const m=o.mind,c=m.calibration;
+  const t=Math.max(0,o.age-2);
+  c.phase="motor calibration";
+  const neutral={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
+  for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.62};
+  const legIndex=Math.floor(t/1.15)%4;
+  const local=t%1.15;
+  const wave=Math.sin((local/1.15)*Math.PI*2);
+  m.command[legIndex].spread={target:wave*0.20,activation:0.95};
+  m.command[legIndex].hip={target:-0.10+wave*0.32,activation:0.98};
+  m.command[legIndex].knee={target:0.28+wave*0.25,activation:1.0};
+  m.command[legIndex].ankle={target:0.06-wave*0.18,activation:0.92};
+  m.command[legIndex].roll={target:wave*0.13,activation:0.78};
+  m.thought=`Testing leg ${legIndex+1} joints.`;
+  return m.command
+}
+
 export function updateMind(app,o,dt){
   const m=o.mind;m.energy=clamp(m.energy-(m.sleep.sleeping?0:dt*(0.0012+m.activity*0.0015)));m.hunger=clamp(m.hunger+dt*0.0025);
   social(app,o,dt);sleep(app,o,dt);
 
   if(o.settling){
+    m.calibration.phase="settling";
     m.thought="Standing up and letting my new joints settle.";
     const neutral={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
-    for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.28};
+    for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.72};
     return m.command
+  }
+  if(o.age<8){
+    return calibrationCommands(o,app);
+  }else if(!m.calibration.done){
+    m.calibration.done=true;m.calibration.phase="learning";
+    m.thought="I can move my joints. Now I can experiment.";
+    showBubble(o,"Okay, my legs move. Time to experiment.",3.2);
   }
   if(m.sleep.sleeping){
     const neutral={spread:0,hip:-0.10,knee:0.20,ankle:0.06,roll:0};

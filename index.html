@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.13.1 — Stance + Movement Fix</title>
+<title>Orbsight v0.13.2 — Motor Calibration</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -32,9 +32,9 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 </head>
 <body>
 <div id="app">
-  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.13.1…</div><div id="err" hidden></div></div>
+  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.13.2…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.13.1</span></h1>
+    <h1>Orbsight <span>v0.13.2</span></h1>
     <div class="small">New physics foundation: real Rapier revolute joint limits. Same stable filenames from now on.</div>
 
     <div class="sec"><h3>Simulation</h3>
@@ -92,7 +92,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <script>
 (async()=>{
   const status=document.getElementById("status"),err=document.getElementById("err");
-  function fail(e){status.textContent="v0.13.1 failed to start";err.hidden=false;err.textContent=(e&&e.stack)?e.stack:String(e)}
+  function fail(e){status.textContent="v0.13.2 failed to start";err.hidden=false;err.textContent=(e&&e.stack)?e.stack:String(e)}
   window.addEventListener("error",e=>fail(e.error||e.message));
   window.addEventListener("unhandledrejection",e=>fail(e.reason));
   if(location.protocol==="file:"){fail("Run this through GitHub Pages / HTTP(S), not file://.");return}

@@ -94,3 +94,18 @@ Changes:
 
 Stable filenames are unchanged:
 index.html / main.js / physics.js / mind.js / world.js
+
+
+# v0.13.2 — Motor Calibration / Proof of Life
+
+This build adds a diagnostic developmental phase because v0.13.1 could look completely inert.
+
+- 0–2s: neutral settling
+- 2–8s: each leg gets obvious safe joint sweeps, one leg at a time
+- after 8s: normal learned motor experimentation
+
+Rapier hard limits remain final authority. Motors now use target position + target velocity and a small equal/opposite physical torque impulse as muscle assist. No teleporting is used.
+
+The pupil also scans independently every rendered frame, restoring the visible eye movement lost during the Rapier rewrite.
+
+Stable filenames remain index.html / main.js / physics.js / mind.js / world.js.
