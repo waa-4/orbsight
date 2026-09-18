@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.11 — Leg Architecture Rebuild</title>
+<title>Orbsight v0.12 — Posture Brain</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -34,7 +34,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <div id="app">
   <div id="view"><canvas id="c"></canvas><div id="status">starting v0.10…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.11</span></h1>
+    <h1>Orbsight <span>v0.12</span></h1>
     <div class="small">Five-file engine rebuild. index.html only contains UI/CSS; physics, mind, world, and bootstrap code are separate.</div>
 
     <div class="sec"><h3>Simulation</h3>
@@ -79,7 +79,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
       <span>Joint guards</span><b id="guardsT">—</b>
       <span>Fold risk</span><b id="foldT">—</b>
       <span>Active grips</span><b id="gripsT">—</b>
-      <span>Sleeping</span><b id="sleepT">—</b>
+      <span>Sleeping</span><b id="sleepT">—</b><span>Posture brain</span><b id="postureT">—</b><span>Curl score</span><b id="curlT">—</b><span>Curl aversion</span><b id="aversionT">—</b>
     </div></div>
 
     <div class="sec"><h3>Joint diagnostics</h3><div id="jointT" class="small">—</div></div>
@@ -91,7 +91,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
   const status=document.getElementById("status"),err=document.getElementById("err");
   function fail(label,e){
     const detail=(e&&e.stack)?e.stack:String(e);
-    status.textContent="v0.11 failed while loading "+label;
+    status.textContent="v0.12 failed while loading "+label;
     err.hidden=false;
     err.textContent="FAILED MODULE: "+label+"\n\n"+detail+
       "\n\nThis build uses brand-new module filenames, so an old cached v0.10.x file cannot be reused.";
@@ -105,14 +105,14 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
   }
 
   try{
-    status.textContent="checking physics-v011.js…";
-    await import("./physics-v011.js");
-    status.textContent="checking world-v011.js…";
-    await import("./world-v011.js");
-    status.textContent="checking mind-v011.js…";
-    await import("./mind-v011.js");
-    status.textContent="starting main-v011.js…";
-    await import("./main-v011.js");
+    status.textContent="checking physics-v012.js…";
+    await import("./physics-v012.js");
+    status.textContent="checking world-v012.js…";
+    await import("./world-v012.js");
+    status.textContent="checking mind-v012.js…";
+    await import("./mind-v012.js");
+    status.textContent="starting main-v012.js…";
+    await import("./main-v012.js");
   }catch(e){
     const current=status.textContent.replace("checking ","").replace("starting ","").replace("…","");
     fail(current||"unknown module",e);

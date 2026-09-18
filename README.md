@@ -1,49 +1,63 @@
-# Orbsight v0.11 — Leg Architecture Rebuild
+# Orbsight v0.12 — Posture Brain
 
-This is not another anti-fold patch. The leg body plan itself was changed.
+This update does what the previous physics-only fixes did not: the Orbsight's MIND explicitly
+recognizes curling as a bad strategy and deliberately stops doing it.
 
 ## Engine files
 - index.html
-- main-v011.js
-- physics-v011.js
-- mind-v011.js
-- world-v011.js
+- main-v012.js
+- physics-v012.js
+- mind-v012.js
+- world-v012.js
 
-## New leg architecture
-- hips mount farther out from the shell
-- upper/lower segments begin farther outward instead of nearly under the body
-- feet are larger and more plantigrade
-- knee range is reduced so the leg can bend deeply but not tuck into a near-paperclip
-- ankle/roll ranges are smaller
-- resting stance biases slightly outward/downward
-- passive outward hip/foot spring acts like anatomy, not navigation
+## Posture brain
+Each leg gets a continuous curl score based on:
+- foot distance to shell
+- sideways tuck distance
+- knee flexion
+- hip flexion
+- ankle extremity
 
-## Anti-curl support rule
-A foot that is both:
-- very close to the shell
-- attached to a deeply flexed knee
+The mind combines those into a whole-body curl score.
 
-does not count as a useful support contact.
+States:
+- normal
+- uncurl
+- stance
 
-This prevents the learner from exploiting curled-up bracing as a substitute for standing or walking.
+If curling becomes moderate/severe, the brain enters `uncurl`.
 
-## Learning bias
-The mind still controls individual joints, but motor targets are gently biased toward a plausible
-resting posture:
-- modest outward hip spread
-- slightly extended hip
-- moderate knee flexion
-- mild ankle extension
+## What uncurl does
+Without teleporting anything, the mind commands:
+- hips outward
+- hips slightly extended
+- knees more open
+- ankles neutral
+- feet level
 
-Actual movement remains learned.
+Motor babbling is suspended while uncurling.
+Climbing grips are not started during posture trouble, and existing grips release.
 
-## Preserved
-- freecam
-- remove selected
-- sleep/mattresses
-- thought bubbles + preset communication
-- body-model learning
-- motor babbling
-- local mutation
-- climbing grips
-- expanded world
+Once the legs are clear, the mind holds a stable stance briefly before returning to exploration.
+
+## Learned curl aversion
+Every curl episode increases a persistent-in-runtime aversion value.
+
+As aversion rises:
+- policy outputs that flex a curled knee farther are suppressed
+- inward hip/abduction commands are suppressed
+- curled movement receives a much larger reward penalty
+- a curled trial is NEVER allowed to become the saved best policy, even if it moved quickly
+
+This closes the exploit where a curled controller could move enough to be selected as "successful."
+
+## Telemetry
+Selected Orbsights now show:
+- Posture brain state
+- Curl score
+- Curl aversion
+- Curl episodes
+- Successful uncurl recoveries
+
+All v0.11 systems remain: redesigned legs, freecam, remove selected, sleep, thoughts/chat,
+developmental motor learning, climbing, and the expanded world.
