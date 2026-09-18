@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0d12">
-<title>Orbsight v0.8 — Grip + Strength + Time</title>
+<title>Orbsight v0.9 — World + Motor Development</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d12;--p:#141821;--p2:#0f131b;--t:#f5f7fb;--m:#9aa3b2;--l:#252c39;--a:#7b8cff;--good:#62cf79;--bad:#e15c5c;--warn:#e4b95c}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--t);font-family:Inter,system-ui,Arial,sans-serif}body{overflow-x:hidden}
@@ -16,7 +16,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/","cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"}}</script>
 </head>
 <body><main>
-<header class="top"><div><h1>Orbsight <span>v0.8</span></h1><p>Stabilized weight distribution, climb-grip feet, stronger adaptive joints, and simulation speed up to 15×.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button>
+<header class="top"><div><h1>Orbsight <span>v0.9</span></h1><p>Expanded layered world plus body-model learning, motor babbling, crawling, weight transfer, stepping, walking, and remembered motor fragments.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button>
 <label style="display:flex;align-items:center;gap:6px">Time <select id="timeScale" style="width:auto"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option><option value="15">15×</option></select></label>
 <button id="reset">Reset world</button><button id="follow">Follow selected: ON</button><button id="reloadBuild">Reload build</button></div></header>
 <div id="err" class="err" hidden><b>Orbsight could not start.</b><div id="errText"></div></div>
@@ -35,15 +35,32 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 <option value="food">Food</option>
 <option value="danger">Danger</option>
 <option value="wall">Static block</option>
-<option value="pushblock">Pushable block</option>
-<option value="ball">Physics ball</option>
-<option value="log">Rolling log</option>
 <option value="platform">Raised platform</option>
+<option value="slope">Slope</option>
+<option value="pushblock">Pushable block</option>
+<option value="lightcube">Light cube</option>
+<option value="heavycube">Heavy cube</option>
+<option value="ball">Physics ball</option>
+<option value="tinyball">Tiny ball</option>
+<option value="bigball">Large ball</option>
+<option value="log">Rolling log</option>
+<option value="cylinder">Rolling cylinder</option>
+<option value="plank">Movable plank</option>
+<option value="ramp">Movable ramp</option>
+<option value="seesaw">Seesaw</option>
+<option value="hanging">Hanging toy</option>
+<option value="spring">Spring pad</option>
+<option value="bumper">Bumper</option>
+<option value="dispenser">Food dispenser</option>
 <option value="toy">Toy</option>
 <option value="marker">Marker</option>
 </select></div><div><label>X</label><input id="objX" type="number" min="-20" max="20" step=".5" value="0"></div><div><label>Z</label><input id="objZ" type="number" min="-20" max="20" step=".5" value="0"></div></div><div class="grid2" style="margin-top:7px"><button id="addObject">Add object</button><button id="randomObject">Add randomly</button></div><div class="small" id="objCount"></div>
 <div class="small" style="margin-top:6px">Pushable blocks, balls, and logs are true rigid bodies. Raised platforms form layered terrain and can be climbed onto if the Orbsight learns how.</div></div>
-<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b><span>Leg separation</span><b id="separationT">—</b><span>Catastrophic resets</span><b id="skeletonFixT">—</b><span>Soft anatomy assists</span><b id="softFixT">—</b><span>Active grips</span><b id="gripsT">—</b><span>Time scale</span><b id="timeT">1×</b><span>Average foot grip</span><b id="gripT">—</b><span>Avg muscle strength</span><b id="muscleT">—</b><span>Muscle fatigue</span><b id="fatigueT">—</b><span>Controller</span><b id="controllerT">learned policy</b></div></div>
+<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b><span>Leg separation</span><b id="separationT">—</b><span>Catastrophic resets</span><b id="skeletonFixT">—</b><span>Soft anatomy assists</span><b id="softFixT">—</b><span>Active grips</span><b id="gripsT">—</b><span>Time scale</span><b id="timeT">1×</b><span>Average foot grip</span><b id="gripT">—</b><span>Avg muscle strength</span><b id="muscleT">—</b><span>Muscle fatigue</span><b id="fatigueT">—</b><span>Controller</span><b id="controllerT">developmental policy</b>
+<span>Dense reward</span><b id="denseRewardT">—</b>
+<span>Exploration</span><b id="exploreT">—</b>
+<span>Motor fragments</span><b id="fragmentsT">—</b>
+<span>Body-model samples</span><b id="bodyModelT">—</b></div></div>
 <div class="sec"><h3>Vestibular system</h3>
 <div class="kv"><span>Tilt</span><b id="vestTilt">—</b><span>Angular speed</span><b id="vestSpin">—</b><span>Acceleration</span><b id="vestAccel">—</b><span>Falling</span><b id="vestFall">—</b></div>
 <div class="small">Inner-ear-like sensors report orientation and motion to the brain. They do not decide actions.</div>
@@ -67,9 +84,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 
-const BUILD='0.8-grip-strength-time-2026-09-17';
-const BRAIN='0.8 climb-grip learned-motor-policy';
-const PHYSICS='cannon-es weighted body + climb grips + adaptive muscles + fixed-step timescale';
+const BUILD='0.9-world-motor-development-2026-09-18';
+const BRAIN='0.9 developmental motor-learning brain';
+const PHYSICS='cannon-es expanded world + developmental motor learning + fixed-step timescale';
 const SAVE_KEY='orbsight-v0.3.5-save';
 const SAVE_VERSION=4;
 let saveTimer=0;
@@ -80,10 +97,10 @@ const err=$('err'),errText=$('errText');
 try{
 $('brainBuild').textContent=BRAIN;$('physicsBuild').textContent=PHYSICS;$('runtimeBuild').textContent=BUILD;
 
-const canvas=$('world'),scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1016);scene.fog=new THREE.Fog(0x0b1016,25,58);
+const canvas=$('world'),scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1016);scene.fog=new THREE.Fog(0x0b1016,38,92);
 const camera=new THREE.PerspectiveCamera(55,1,.1,120);camera.position.set(10,7.5,12);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.shadowMap.enabled=true;
-const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=4;controls.maxDistance=34;
+const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.target.set(0,1,0);controls.minDistance=4;controls.maxDistance=52;
 scene.add(new THREE.HemisphereLight(0xd8e2ff,0x243328,2.15));const sun=new THREE.DirectionalLight(0xffffff,2.35);sun.position.set(9,14,7);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
 
 const world=new CANNON.World({gravity:new CANNON.Vec3(0,-9.82,0)});world.allowSleep=true;world.solver.iterations=28;world.solver.tolerance=.001;world.broadphase=new CANNON.SAPBroadphase(world);
@@ -99,85 +116,121 @@ world.addContactMaterial(new CANNON.ContactMaterial(objectMat,groundMat,{frictio
 world.addContactMaterial(new CANNON.ContactMaterial(objectMat,objectMat,{friction:.48,restitution:.10}));
 
 const groundBody=new CANNON.Body({mass:0,material:groundMat});groundBody.addShape(new CANNON.Plane());groundBody.quaternion.setFromEuler(-Math.PI/2,0,0);groundBody.collisionFilterGroup=ENV;groundBody.collisionFilterMask=CREATURE|PROP;world.addBody(groundBody);
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(48,48),new THREE.MeshStandardMaterial({color:0x202a27,roughness:1}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);const grid=new THREE.GridHelper(48,48,0x34443f,0x27342f);grid.position.y=.006;scene.add(grid);
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(72,72),new THREE.MeshStandardMaterial({color:0x202a27,roughness:1}));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);const grid=new THREE.GridHelper(72,72,0x34443f,0x27342f);grid.position.y=.006;scene.add(grid);
 
 let paused=false,follow=true,selected=null,nextOrbId=1,nextThingId=1,simTime=0;let timeScale=1,physicsAccumulator=0;const orbs=[],things=[];const ray=new THREE.Raycaster(),mouse=new THREE.Vector2();
 const geo={shell:new THREE.SphereGeometry(.62,32,22),upper:new THREE.CylinderGeometry(.052,.052,.50,8),lower:new THREE.CylinderGeometry(.048,.048,.46,8),foot:new THREE.BoxGeometry(.17,.10,.34),joint:new THREE.SphereGeometry(.065,12,8),ankle:new THREE.SphereGeometry(.055,12,8)};
 const eyeGeo=new THREE.SphereGeometry(.23,22,16),pupilGeo=new THREE.SphereGeometry(.095,18,12);
-function colorFor(t){return({food:0x58cc73,danger:0xe85c5c,wall:0x727b88,pushblock:0x9b7653,ball:0xd68df0,log:0x8b5e3c,platform:0x596b63,toy:0x68a8ff,marker:0xe9cc62})[t]||0xffffff}function labelFor(t){return({food:'green food',danger:'red danger',wall:'stone block',pushblock:'pushable wooden block',ball:'purple physics ball',log:'rolling log',platform:'raised terrain',toy:'blue toy',marker:'yellow marker'})[t]||t}function pct(v){return Math.round(clamp(v)*100)+'%'}function wrap(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
+function colorFor(t){return({food:0x58cc73,danger:0xe85c5c,wall:0x727b88,platform:0x596b63,slope:0x65756c,pushblock:0x9b7653,lightcube:0xd3ad78,heavycube:0x545861,ball:0xd68df0,tinyball:0xffa7e8,bigball:0xb274d1,log:0x8b5e3c,cylinder:0x96704d,plank:0xa77c50,ramp:0x8f775b,seesaw:0xc49b67,hanging:0x66c7d1,spring:0x67d690,bumper:0xff9e6b,dispenser:0x6eb7a7,toy:0x68a8ff,marker:0xe9cc62})[t]||0xffffff}function labelFor(t){return({food:'green food',danger:'red danger',wall:'stone block',platform:'raised terrain',slope:'stone slope',pushblock:'pushable wooden block',lightcube:'light cube',heavycube:'heavy cube',ball:'purple physics ball',tinyball:'tiny ball',bigball:'large ball',log:'rolling log',cylinder:'rolling cylinder',plank:'movable plank',ramp:'movable ramp',seesaw:'seesaw',hanging:'hanging toy',spring:'spring pad',bumper:'soft bumper',dispenser:'food dispenser',toy:'blue toy',marker:'yellow marker'})[t]||t}function pct(v){return Math.round(clamp(v)*100)+'%'}function wrap(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a}
 function copyPose(mesh,body){mesh.position.set(body.position.x,body.position.y,body.position.z);mesh.quaternion.set(body.quaternion.x,body.quaternion.y,body.quaternion.z,body.quaternion.w)}
 function zeroBody(b){b.velocity.set(0,0,0);b.angularVelocity.set(0,0,0);b.force.set(0,0,0);b.torque.set(0,0,0);b.wakeUp()}
 
 function addThing(type,x,z,r=.55,y=null){
- x=THREE.MathUtils.clamp(Number(x)||0,-21,21);
- z=THREE.MathUtils.clamp(Number(z)||0,-21,21);
- r=Math.max(.22,Number(r)||.55);
- let mesh,body,dynamic=false;
+ x=THREE.MathUtils.clamp(Number(x)||0,-33,33);
+ z=THREE.MathUtils.clamp(Number(z)||0,-33,33);
+ r=Math.max(.18,Number(r)||.55);
+ let mesh,body,dynamic=false,auxBodies=[],auxConstraints=[],meta={};
+
+ const mat=()=>new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.82});
 
  if(type==='wall'){
-   r=Math.max(.55,r||1);
-   const h=1.55;
-   mesh=new THREE.Mesh(new THREE.BoxGeometry(r*2,h,r*2),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.9}));
-   const py=y==null?h/2:Number(y);
-   mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(new CANNON.Vec3(r,h/2,r)),position:new CANNON.Vec3(x,py,z)});
+   r=Math.max(.45,r);const h=1.55,py=y==null?h/2:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(r*2,h,r*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(cvec(r,h/2,r)),position:cvec(x,py,z)});
  }else if(type==='platform'){
-   const halfX=Math.max(.8,r*1.65),halfZ=Math.max(.8,r*1.65),halfY=.16;
-   const py=y==null?rand(.35,1.05):Number(y);
-   mesh=new THREE.Mesh(new THREE.BoxGeometry(halfX*2,halfY*2,halfZ*2),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:1}));
-   mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(new CANNON.Vec3(halfX,halfY,halfZ)),position:new CANNON.Vec3(x,py,z)});
- }else if(type==='pushblock'){
+   const hx=Math.max(.7,r*1.65),hz=Math.max(.7,r*1.65),hy=.16,py=y==null?rand(.28,1.05):Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(cvec(hx,hy,hz)),position:cvec(x,py,z)});
+   meta.hx=hx;meta.hz=hz;meta.hy=hy;
+ }else if(type==='slope'){
+   const hx=Math.max(.85,r*1.55),hz=Math.max(.7,r*1.25),hy=.13,py=y==null?.34:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);mesh.rotation.z=-.22;
+   body=new CANNON.Body({mass:0,material:objectMat,position:cvec(x,py,z)});
+   body.addShape(new CANNON.Box(cvec(hx,hy,hz)));body.quaternion.setFromEuler(0,0,-.22);
+   meta.hx=hx;meta.hz=hz;meta.hy=hy;
+ }else if(['pushblock','lightcube','heavycube'].includes(type)){
    dynamic=true;
-   const half=Math.max(.25,r*.65),py=y==null?half+.03:Number(y);
-   mesh=new THREE.Mesh(new THREE.BoxGeometry(half*2,half*2,half*2),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.88}));
-   mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:.36,material:objectMat,position:new CANNON.Vec3(x,py,z),linearDamping:.16,angularDamping:.24,allowSleep:true});
-   body.addShape(new CANNON.Box(new CANNON.Vec3(half,half,half)));
-   r=half;
- }else if(type==='ball'){
+   const half=Math.max(.22,r*.65),py=y==null?half+.03:Number(y);
+   const mass=type==='lightcube'?.12:type==='heavycube'?1.05:.36;
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(half*2,half*2,half*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass,material:objectMat,position:cvec(x,py,z),linearDamping:type==='heavycube'?.22:.12,angularDamping:.20,allowSleep:true});
+   body.addShape(new CANNON.Box(cvec(half,half,half)));r=half;meta.half=half;
+ }else if(['ball','tinyball','bigball'].includes(type)){
    dynamic=true;
-   const rad=Math.max(.24,r*.72),py=y==null?rad+.03:Number(y);
-   mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,22,15),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.42}));
+   const mul=type==='tinyball'?.42:type==='bigball'?1.35:.72;
+   const rad=Math.max(.16,r*mul),py=y==null?rad+.03:Number(y);
+   const mass=type==='tinyball'?.055:type==='bigball'?.62:.24;
+   mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,22,15),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.36}));
    mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:.24,material:objectMat,position:new CANNON.Vec3(x,py,z),linearDamping:.055,angularDamping:.045,allowSleep:true});
+   body=new CANNON.Body({mass,material:objectMat,position:cvec(x,py,z),linearDamping:.035,angularDamping:.025,allowSleep:true});
    body.addShape(new CANNON.Sphere(rad));r=rad;
- }else if(type==='log'){
+ }else if(type==='log'||type==='cylinder'){
    dynamic=true;
-   const rad=Math.max(.20,r*.48),len=Math.max(.65,r*1.6),py=y==null?rad+.04:Number(y);
-   mesh=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,12),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.92}));
-   mesh.rotation.z=Math.PI/2;mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:.32,material:objectMat,position:new CANNON.Vec3(x,py,z),linearDamping:.08,angularDamping:.07,allowSleep:true});
-   const shape=new CANNON.Cylinder(rad,rad,len,12);
-   const q=new CANNON.Quaternion();q.setFromEuler(0,0,Math.PI/2);
-   body.addShape(shape,new CANNON.Vec3(),q);r=Math.max(rad,len*.5);
+   const rad=Math.max(.18,r*.45),len=Math.max(.62,r*1.7),py=y==null?rad+.04:Number(y);
+   mesh=new THREE.Mesh(new THREE.CylinderGeometry(rad,rad,len,12),mat());mesh.rotation.z=Math.PI/2;mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:type==='cylinder'?.26:.34,material:objectMat,position:cvec(x,py,z),linearDamping:.06,angularDamping:.045,allowSleep:true});
+   const shape=new CANNON.Cylinder(rad,rad,len,12),q=new CANNON.Quaternion();q.setFromEuler(0,0,Math.PI/2);
+   body.addShape(shape,cvec(),q);r=Math.max(rad,len*.5);meta.rad=rad;meta.len=len;
+ }else if(type==='plank'||type==='ramp'){
+   dynamic=true;
+   const hx=Math.max(.75,r*1.35),hy=.09,hz=Math.max(.28,r*.42),py=y==null?.24:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:type==='ramp'?.42:.30,material:objectMat,position:cvec(x,py,z),linearDamping:.08,angularDamping:.10,allowSleep:true});
+   body.addShape(new CANNON.Box(cvec(hx,hy,hz)));
+   if(type==='ramp'){body.quaternion.setFromEuler(0,0,-.18);mesh.rotation.z=-.18}
+   r=hx;meta.hx=hx;meta.hz=hz;meta.hy=hy;
+ }else if(type==='seesaw'){
+   dynamic=true;
+   const hx=Math.max(.9,r*1.55),hy=.08,hz=.32,py=y==null?.55:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:.48,material:objectMat,position:cvec(x,py,z),linearDamping:.08,angularDamping:.10,allowSleep:false});
+   body.addShape(new CANNON.Box(cvec(hx,hy,hz)));
+   const pivot=new CANNON.Body({mass:0,material:objectMat,position:cvec(x,py,z)});world.addBody(pivot);auxBodies.push(pivot);
+   const h=new CANNON.HingeConstraint(pivot,body,{pivotA:cvec(0,0,0),pivotB:cvec(0,0,0),axisA:cvec(0,0,1),axisB:cvec(0,0,1),collideConnected:false});
+   world.addConstraint(h);auxConstraints.push(h);r=hx;meta.hx=hx;meta.hz=hz;
+ }else if(type==='hanging'){
+   dynamic=true;
+   const rad=Math.max(.22,r*.55),py=y==null?1.55:Number(y);
+   mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,20,14),mat());mesh.position.set(x,py-.65,z);
+   body=new CANNON.Body({mass:.16,material:objectMat,position:cvec(x,py-.65,z),linearDamping:.04,angularDamping:.04,allowSleep:false});
+   body.addShape(new CANNON.Sphere(rad));
+   const anchor=new CANNON.Body({mass:0,material:objectMat,position:cvec(x,py,z)});world.addBody(anchor);auxBodies.push(anchor);
+   const c=new CANNON.PointToPointConstraint(body,cvec(0,rad,0),anchor,cvec(0,-.65,0),14);world.addConstraint(c);auxConstraints.push(c);r=rad;
+ }else if(type==='spring'){
+   const hx=Math.max(.5,r),hy=.08,hz=Math.max(.5,r),py=y==null?.09:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(cvec(hx,hy,hz)),position:cvec(x,py,z)});
+   r=Math.max(hx,hz);meta.hx=hx;meta.hz=hz;meta.hy=hy;
+ }else if(type==='bumper'){
+   const rad=Math.max(.28,r*.7),py=y==null?rad:Number(y);
+   mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,18,12),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Sphere(rad),position:cvec(x,py,z)});r=rad;
+ }else if(type==='dispenser'){
+   const hx=.45,hy=.60,hz=.45,py=y==null?hy:Number(y);
+   mesh=new THREE.Mesh(new THREE.BoxGeometry(hx*2,hy*2,hz*2),mat());mesh.position.set(x,py,z);
+   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Box(cvec(hx,hy,hz)),position:cvec(x,py,z)});
+   r=.6;meta.dispenserTimer=rand(5,11);
  }else{
    const rad=r,py=y==null?rad:Number(y);
    mesh=new THREE.Mesh(new THREE.SphereGeometry(rad,20,14),new THREE.MeshStandardMaterial({color:colorFor(type),roughness:.62}));
-   mesh.position.set(x,py,z);
-   body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Sphere(rad),position:new CANNON.Vec3(x,py,z)});
+   mesh.position.set(x,py,z);body=new CANNON.Body({mass:0,material:objectMat,shape:new CANNON.Sphere(rad),position:cvec(x,py,z)});
  }
 
  mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
- if(dynamic){
-   body.collisionFilterGroup=PROP;
-   body.collisionFilterMask=ENV|PROP|CREATURE;
- }else{
-   body.collisionFilterGroup=ENV;
-   body.collisionFilterMask=CREATURE|PROP;
- }
+ if(dynamic){body.collisionFilterGroup=PROP;body.collisionFilterMask=ENV|PROP|CREATURE}
+ else{body.collisionFilterGroup=ENV;body.collisionFilterMask=CREATURE|PROP}
  world.addBody(body);
- const o={id:nextThingId++,type,label:labelFor(type),mesh,body,r,active:true,dynamic};
- body._thing=o;things.push(o);updateObjectCount();return o
+ const o={id:nextThingId++,type,label:labelFor(type),mesh,body,r,active:true,dynamic,auxBodies,auxConstraints,meta};
+ body._thing=o;for(const b of auxBodies)b._thing=o;things.push(o);updateObjectCount();return o
 }
 function setThingActive(it,active){it.active=active;it.mesh.visible=active;it.body.collisionFilterMask=active?(it.dynamic?(ENV|PROP|CREATURE):(CREATURE|PROP)):0;it.body.aabbNeedsUpdate=true}
 function updateObjectCount(){$('objCount').textContent=`${things.filter(t=>t.active).length} active objects`}
-function removeThing(it){scene.remove(it.mesh);world.removeBody(it.body)}
+function removeThing(it){scene.remove(it.mesh);try{world.removeBody(it.body)}catch(e){};(it.auxConstraints||[]).forEach(c=>{try{world.removeConstraint(c)}catch(e){}});(it.auxBodies||[]).forEach(b=>{try{world.removeBody(b)}catch(e){}})}
 
 function randomPersonality(){return{curiosity:rand(.25,.95),bravery:rand(.2,.9),stubbornness:rand(.15,.9),sociability:rand(.1,.95),patience:rand(.15,.9),playfulness:rand(.1,.95)}}
 
 const MOTOR_JOINTS=['abduct','hip','knee','ankle','foot'];
-const MOTOR_FEATURES=8;
+const MOTOR_FEATURES=11;
 // Features: bias, oscillator sin, oscillator cos, foot contact, joint angle,
 // joint velocity, body tilt signal, heading error.
 
@@ -186,7 +239,7 @@ function randWeights(scale=.32){
 }
 function seedGenome(){
   return{
-    controller:'policy-v1',
+    controller:'policy-v2',
     freq:rand(.55,.95),
     phaseOffsets:[0,Math.PI,Math.PI,0],
     phaseCoupling:rand(.4,.8),
@@ -204,7 +257,7 @@ function cloneGenome(g){return JSON.parse(JSON.stringify(g))}
 function sanitizeGenome(g){
   // Old sinusoidal genomes are intentionally NOT carried forward. They caused
   // every update to preserve the same tap-dancing behavior.
-  if(!g || g.controller!=='policy-v1' || !Array.isArray(g.policies) || g.policies.length!==4){
+  if(!g || g.controller!=='policy-v2' || !Array.isArray(g.policies) || g.policies.length!==4){
     return seedGenome();
   }
   const n=cloneGenome(g);
@@ -227,16 +280,20 @@ function sanitizeGenome(g){
 }
 function mutateGenome(g,amt=.08){
   const n=sanitizeGenome(g);
-  n.freq=THREE.MathUtils.clamp(n.freq+rand(-amt,amt)*.45,.35,1.35);
-  n.phaseCoupling=THREE.MathUtils.clamp(n.phaseCoupling+rand(-amt,amt)*.30,0,1.5);
-  n.outputGain=THREE.MathUtils.clamp(n.outputGain+rand(-amt,amt)*.20,.18,1.0);
-  n.phaseOffsets=n.phaseOffsets.map(v=>v+rand(-amt,amt)*.45);
-  for(let i=0;i<4;i++)for(const j of MOTOR_JOINTS){
-    const w=n.policies[i][j];
-    for(let k=0;k<w.length;k++){
-      if(Math.random()<.55)w[k]=THREE.MathUtils.clamp(w[k]+rand(-amt,amt)*.85,-2.5,2.5);
+  // Local mutation: change only a few leg/joint modules so useful discoveries survive.
+  const edits=1+Math.floor(Math.random()*3);
+  for(let e=0;e<edits;e++){
+    const li=Math.floor(Math.random()*4),jn=MOTOR_JOINTS[Math.floor(Math.random()*MOTOR_JOINTS.length)];
+    const w=n.policies[li][jn];
+    const count=1+Math.floor(Math.random()*3);
+    for(let c=0;c<count;c++){
+      const k=Math.floor(Math.random()*w.length);
+      w[k]=THREE.MathUtils.clamp(w[k]+rand(-amt,amt)*1.05,-2.5,2.5);
     }
   }
+  if(Math.random()<.24)n.freq=THREE.MathUtils.clamp(n.freq+rand(-amt,amt)*.28,.30,1.35);
+  if(Math.random()<.18)n.outputGain=THREE.MathUtils.clamp(n.outputGain+rand(-amt,amt)*.14,.18,1.0);
+  if(Math.random()<.14)n.phaseOffsets[Math.floor(Math.random()*4)]+=rand(-amt,amt)*.30;
   return n;
 }
 function policyOut(weights,features,gain){
@@ -429,14 +486,22 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
  lastThingHit:new Map(),events:[],motorOutput:0,motorStallTimer:0,
  vestibular:{tilt:0,angularSpeed:0,accel:0,falling:false,lastVel:cvec(0,0,0),upY:1},
  proprio:{jointAwareness:0,contactCount:0,loadSymmetry:0,motorError:0,legs:[]},
- development:{stage:0,stageName:'joint discovery',stageTime:0,stableTime:0,stepEvidence:0,walkEvidence:0},
+ development:{stage:0,stageName:'body discovery',stageTime:0,stableTime:0,crawlEvidence:0,transferEvidence:0,stepEvidence:0,walkEvidence:0},
  settlingTime:2.2,supportReflex:0,bodyClearance:0,
  skeleton:{corrections:0,lastReason:'none',cooldowns:[0,0,0,0],violation:[0,0,0,0],merge:{},softFixes:0,},
- motor:{genome,best:cloneGenome(genome),bestScore:-999,trialX:x,trialZ:z,trialY:shellY,trialTime:0,generation:1,collisions:0,falls:0,score:0,confidence:.18,energyStart:1,jointError:0,policyActivity:0},
+ motor:{genome,best:cloneGenome(genome),bestScore:-999,trialX:x,trialZ:z,trialY:shellY,trialTime:0,generation:1,collisions:0,falls:0,score:0,confidence:.18,energyStart:1,jointError:0,policyActivity:0,denseReward:0,denseAccum:0,lastImprovementTime:0,fragments:[]},
+ learning:{
+   bodyModel:Array.from({length:4},()=>Object.fromEntries(MOTOR_JOINTS.map(j=>[j,{forward:0,lift:0,support:0,samples:0}]))),
+   prevPos:{x,y:shellY,z},prevUpright:1,prevContacts:0,
+   prevAngles:Array.from({length:4},()=>({abduct:0,hip:0,knee:0,ankle:0,foot:0})),
+   babble:{timer:0,leg:0,joint:'knee',value:0},
+   exploreTimer:0,exploreNoise:Array.from({length:4},()=>Object.fromEntries(MOTOR_JOINTS.map(j=>[j,0]))),
+   fragmentCooldown:0
+ },
  removed:false};
 
  parts.forEach(({body})=>body.addEventListener('collide',ev=>onCreatureCollision(o,ev.body)));
- orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.6 learned motor policy online — no canned leg cycle','hot');logEvent(o,'motor deadlock protection online','hot');
+ orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.9 developmental learning online — body model, babbling, crawl, transfer, step, walk','hot');logEvent(o,'motor deadlock protection online','hot');
  if(!selected)selectOrb(o);refreshOrbList();return o
 }
 function destroyOrb(o){o.removed=true;o.legs.forEach(leg=>releaseGrip(leg));o.constraints.forEach(c=>world.removeConstraint(c));o.parts.forEach(({body,mesh})=>{world.removeBody(body);scene.remove(mesh)});scene.remove(o.eyeRoot);const i=orbs.indexOf(o);if(i>=0)orbs.splice(i,1);if(selected===o)selectOrb(orbs[0]||null);refreshOrbList()}
@@ -472,7 +537,19 @@ function decide(o,s){
  }
  if(o.energy<.16)o.thought='Low energy. Reducing joint effort.'
 }
-function onCreatureCollision(o,other){const it=other?other._thing:null;if(!it||!it.active)return;const prev=o.lastThingHit.get(it.id)||-99;if(simTime-prev<.6)return;o.lastThingHit.set(it.id,simTime);o.motor.collisions++;if(it.type==='wall'){adjustInterest(o,'wall',-.02);cooldownTarget(o,it,2.5);short(o,'physical collision with block',.5);logEvent(o,'block collision — route devalued','bad')}if(it.dynamic&&(it.type==='pushblock'||it.type==='ball'||it.type==='log')){const speed=it.body.velocity.length();if(speed>.08){o.energy=clamp(o.energy-.002);adjustInterest(o,'toy',.006);short(o,`moved ${it.label}`,.35)}}if(it.type==='danger'){o.safety=clamp(o.safety-.2);o.energy=clamp(o.energy-.05);adjustInterest(o,'danger',-.08);cooldownTarget(o,it,7);short(o,'body touched danger',1);logEvent(o,'danger contact','bad')}}
+function onCreatureCollision(o,other){
+ const it=other?other._thing:null;if(!it||!it.active)return;
+ const prev=o.lastThingHit.get(it.id)||-99;if(simTime-prev<.35)return;o.lastThingHit.set(it.id,simTime);o.motor.collisions++;
+ if(['wall','platform','slope','ramp'].includes(it.type)){placeMemory(o,it,'terrain');}
+ if(it.type==='wall'){adjustInterest(o,'wall',-.015);short(o,'physical collision with block',.4)}
+ if(it.dynamic){const speed=it.body.velocity.length();if(speed>.06){o.energy=clamp(o.energy-.0015);adjustInterest(o,'toy',.004);short(o,`moved ${it.label}`,.3)}}
+ if(it.type==='spring'){o.shellBody.velocity.y=Math.max(o.shellBody.velocity.y,2.15);short(o,'spring pad launched body',.45)}
+ if(it.type==='bumper'){
+   let dx=o.shellBody.position.x-it.body.position.x,dz=o.shellBody.position.z-it.body.position.z,d=Math.hypot(dx,dz)||1;
+   o.shellBody.velocity.x+=dx/d*1.1;o.shellBody.velocity.z+=dz/d*1.1;
+ }
+ if(it.type==='danger'){o.safety=clamp(o.safety-.2);o.energy=clamp(o.energy-.05);adjustInterest(o,'danger',-.08);cooldownTarget(o,it,7);short(o,'body touched danger',1);logEvent(o,'danger contact','bad')}
+}
 function interactNearby(o){for(const it of things){if(!it.active)continue;const d=Math.hypot(it.body.position.x-o.shellBody.position.x,it.body.position.z-o.shellBody.position.z);if(d>.9+it.r)continue;if(it.type==='food'){setThingActive(it,false);o.hunger=clamp(o.hunger-.48);o.energy=clamp(o.energy+.2);adjustInterest(o,'food',.08);short(o,'ate food successfully',.9);logEvent(o,'ate food — food interest increased','hot');setTimeout(()=>{it.body.position.set(rand(-17,17),it.r,rand(-17,17));it.mesh.position.set(it.body.position.x,it.body.position.y,it.body.position.z);it.body.aabbNeedsUpdate=true;setThingActive(it,true);updateObjectCount()},5000)}else if(it.type==='toy'||it.type==='marker'){const prev=o.lastThingHit.get(100000+it.id)||-99;if(simTime-prev>3){o.lastThingHit.set(100000+it.id,simTime);adjustInterest(o,it.type,.025);cooldownTarget(o,it,2.5);short(o,`investigated ${it.label}`,.55);logEvent(o,`investigated ${it.label}`)}}}}
 
 
@@ -603,13 +680,22 @@ function driveGait(o,dt){
        angleNorm,
        jointVel,
        tiltSignal,
-       turnSignal
+       turnSignal,
+       o.learning.bodyModel[i][name].forward,
+       o.learning.bodyModel[i][name].lift,
+       o.learning.bodyModel[i][name].support
      ];
      const raw=policyOut(g.policies[i][name],features,g.outputGain);
      // Learned output is a *muscle activation target*, not a canned trajectory.
-     targets[name]=raw;
+     let learned=raw;
+     learned+=o.learning.exploreNoise[i][name]||0;
+     if(o.development.stage===0&&o.learning.babble.leg===i&&o.learning.babble.joint===name){
+       learned+=o.learning.babble.value*.62;
+     }
+     targets[name]=THREE.MathUtils.clamp(learned,-1,1);
    }
 
+   // v0.9 keeps relaxed muscle control but now feeds it learned causal body-model signals.
    // v0.7 interprets the policy more like muscle activation than a rigid pose.
    // Low activation leaves the joint mostly relaxed instead of holding a fixed angle.
    const climbSense=climbOpportunity(o,leg);
@@ -1018,69 +1104,147 @@ function updateBodySenses(o,dt){
   o.proprio.motorError=o.motor.jointError||0;
   o.proprio.legs=legs;
 }
+
+function updateMotorLearning(o,dt){
+  const L=o.learning,m=o.motor;
+  const p=o.shellBody.position,f=shellForward(o),upr=uprightValue(o);
+  const dx=p.x-L.prevPos.x,dy=p.y-L.prevPos.y,dz=p.z-L.prevPos.z;
+  const forward=dx*f.x+dz*f.z;
+  const horiz=Math.hypot(dx,dz);
+  const contactDelta=o.proprio.contactCount-L.prevContacts;
+
+  // Immediate dense reward: crawling counts, not just upright walking.
+  let r=0;
+  r+=Math.max(0,forward)*15;
+  r+=horiz*3.2;
+  r+=Math.max(0,dy)*3.8;
+  r+=Math.max(-.015,Math.min(.015,upr-L.prevUpright))*10;
+  if(o.proprio.contactCount>=2)r+=.006;
+  if(contactDelta>0)r+=.012*contactDelta;
+  if(o.vestibular.angularSpeed>4)r-=.012;
+  if(o.motor.jointError>.65)r-=.008;
+  m.denseReward=r;m.denseAccum+=r;
+
+  // Learn a crude causal body model from joint changes -> body/foot consequences.
+  for(let i=0;i<4;i++){
+    const sensed=o.proprio.legs[i];if(!sensed)continue;
+    const now={abduct:sensed.angles.spread,hip:sensed.angles.hip,knee:sensed.angles.knee,ankle:sensed.angles.ankle,foot:sensed.angles.foot};
+    const prev=L.prevAngles[i];
+    for(const j of MOTOR_JOINTS){
+      const da=now[j]-prev[j];
+      if(Math.abs(da)>.0015){
+        const e=L.bodyModel[i][j],sg=Math.sign(da);
+        const k=.025;
+        e.forward=THREE.MathUtils.lerp(e.forward,THREE.MathUtils.clamp(forward*sg/dt,-1,1),k);
+        e.lift=THREE.MathUtils.lerp(e.lift,THREE.MathUtils.clamp(dy*sg/dt,-1,1),k);
+        e.support=THREE.MathUtils.lerp(e.support,THREE.MathUtils.clamp(contactDelta*sg,-1,1),k);
+        e.samples++;
+      }
+      prev[j]=now[j];
+    }
+  }
+
+  // Early motor babbling: isolate a joint for short experiments.
+  L.babble.timer-=dt;
+  if(L.babble.timer<=0){
+    L.babble.timer=o.development.stage===0?rand(.45,.95):rand(1.2,2.4);
+    L.babble.leg=Math.floor(Math.random()*4);
+    L.babble.joint=MOTOR_JOINTS[Math.floor(Math.random()*MOTOR_JOINTS.length)];
+    L.babble.value=rand(-1,1);
+  }
+
+  // If learning has stagnated, periodically increase structured exploration.
+  const stagnant=simTime-(m.lastImprovementTime||0)>24;
+  L.exploreTimer-=dt;
+  if(stagnant&&L.exploreTimer<=0){
+    L.exploreTimer=rand(.45,.9);
+    for(let i=0;i<4;i++)for(const j of MOTOR_JOINTS)L.exploreNoise[i][j]=Math.random()<.18?rand(-.35,.35):0;
+  }else if(!stagnant){
+    for(let i=0;i<4;i++)for(const j of MOTOR_JOINTS)L.exploreNoise[i][j]*=.96;
+  }
+
+  // Remember successful short movement fragments.
+  L.fragmentCooldown-=dt;
+  if(r>.035&&L.fragmentCooldown<=0){
+    let bestLeg=0,bestSpeed=-1;
+    for(let i=0;i<4;i++){const s=o.proprio.legs[i]?.speed||0;if(s>bestSpeed){bestSpeed=s;bestLeg=i}}
+    m.fragments.push({leg:bestLeg,policy:cloneGenome({p:o.motor.genome.policies[bestLeg]}).p,score:r,time:simTime});
+    m.fragments.sort((a,b)=>b.score-a.score);
+    m.fragments=m.fragments.slice(0,12);
+    L.fragmentCooldown=1.5;
+  }
+
+  L.prevPos={x:p.x,y:p.y,z:p.z};L.prevUpright=upr;L.prevContacts=o.proprio.contactCount;
+}
+function bodyModelSampleCount(o){
+  let n=0;for(const leg of o.learning.bodyModel)for(const j of MOTOR_JOINTS)n+=leg[j].samples||0;return n
+}
 function updateDevelopment(o,dt){
   const d=o.development;
   d.stageTime+=dt;
-  const upright=uprightValue(o);
-  const contacts=o.proprio.contactCount;
-  const motorActive=o.motorOutput>.08;
+  const upright=uprightValue(o),contacts=o.proprio.contactCount;
   const moving=Math.hypot(o.shellBody.velocity.x,o.shellBody.velocity.z);
+  const lowBody=o.shellBody.position.y<1.18;
 
-  if(upright>.72&&contacts>=2)d.stableTime+=dt;else d.stableTime=Math.max(0,d.stableTime-dt*.8);
-  if(contacts>=2&&motorActive)d.stepEvidence+=dt;else d.stepEvidence=Math.max(0,d.stepEvidence-dt*.4);
-  if(moving>.08&&upright>.62)d.walkEvidence+=dt;else d.walkEvidence=Math.max(0,d.walkEvidence-dt*.25);
+  if(upright>.62&&contacts>=2)d.stableTime+=dt;else d.stableTime=Math.max(0,d.stableTime-dt*.55);
+  if(moving>.045&&contacts>=1)d.crawlEvidence+=dt;else d.crawlEvidence=Math.max(0,d.crawlEvidence-dt*.18);
+  if(contacts>=2&&o.proprio.loadSymmetry>.35&&moving>.035)d.transferEvidence+=dt;else d.transferEvidence=Math.max(0,d.transferEvidence-dt*.22);
+  if(contacts>=1&&o.motorOutput>.06&&moving>.055)d.stepEvidence+=dt;else d.stepEvidence=Math.max(0,d.stepEvidence-dt*.22);
+  if(moving>.10&&upright>.52)d.walkEvidence+=dt;else d.walkEvidence=Math.max(0,d.walkEvidence-dt*.18);
 
   let next=d.stage;
-  if(d.stage===0 && d.stageTime>8 && o.motorOutput>.08) next=1;
-  if(d.stage===1 && d.stableTime>3.5) next=2;
-  if(d.stage===2 && d.stepEvidence>5) next=3;
-  if(d.stage===3 && d.walkEvidence>6) next=4;
-  if(d.stage===4 && d.walkEvidence>15) next=5;
+  if(d.stage===0 && d.stageTime>10 && bodyModelSampleCount(o)>80)next=1;
+  if(d.stage===1 && (d.stableTime>3||d.crawlEvidence>5))next=2;
+  if(d.stage===2 && d.crawlEvidence>10)next=3;
+  if(d.stage===3 && d.transferEvidence>8)next=4;
+  if(d.stage===4 && d.stepEvidence>10)next=5;
+  if(d.stage===5 && d.walkEvidence>18)next=6;
 
-  const names=['joint discovery','balance','standing','stepping','walking','free locomotion'];
+  const names=['body discovery','ground support','crawling','weight transfer','stepping','walking','free locomotion'];
   if(next!==d.stage){
     d.stage=next;d.stageName=names[next];d.stageTime=0;
     logEvent(o,`motor development advanced to ${d.stageName}`,'hot');
-    short(o,`learned enough to enter ${d.stageName}`,.78);
+    short(o,`entered ${d.stageName}`,.78);
   }else d.stageName=names[d.stage];
 }
 function evaluateMotor(o){
- const m=o.motor;if(simTime-m.trialTime<8.5)return;
- const dx=o.shellBody.position.x-m.trialX,dz=o.shellBody.position.z-m.trialZ,dy=o.shellBody.position.y-(m.trialY??o.shellBody.position.y);
- const dist=Math.hypot(dx,dz);
- const upr=uprightValue(o),energyUsed=Math.max(0,m.energyStart-o.energy);
- const d=o.development,control=clamp(1-o.motor.jointError*.48);
- const sym=o.proprio.loadSymmetry,contacts=o.proprio.contactCount/4;
+ const m=o.motor;
+ const trialLen=o.development.stage<=1?6.5:o.development.stage===2?7.5:9.0;
+ if(simTime-m.trialTime<trialLen)return;
 
- const f=shellForward(o);
- const forwardProgress=dx*f.x+dz*f.z;
- const lateral=Math.abs(dx*f.z-dz*f.x);
- const activity=clamp(o.motor.policyActivity||0);
+ const dx=o.shellBody.position.x-m.trialX,dz=o.shellBody.position.z-m.trialZ,dy=o.shellBody.position.y-(m.trialY??o.shellBody.position.y);
+ const dist=Math.hypot(dx,dz),upr=uprightValue(o),d=o.development;
+ const f=shellForward(o),forwardProgress=dx*f.x+dz*f.z;
+ const sym=o.proprio.loadSymmetry,contacts=o.proprio.contactCount/4;
+ const dense=m.denseAccum;
 
  let score=0;
- if(d.stage===0) score=activity*2.2+control*2+upr*.8-m.falls*1.5;
- else if(d.stage===1) score=upr*3+sym*2+contacts+control- o.vestibular.angularSpeed*.12-m.falls*2.2;
- else if(d.stage===2) score=upr*2.6+contacts*1.4+sym+control+activity*.4-m.falls*2.4;
- else if(d.stage===3) score=Math.max(0,forwardProgress)*1.4+dist*.35+Math.max(0,dy)*1.0+upr*2+contacts+control-lateral*.25-m.falls*2.4;
- else score=Math.max(0,forwardProgress)*2.4+dist*.45+Math.max(0,dy)*1.25+upr*2.2+sym*.6-lateral*.25-m.collisions*.30-m.falls*3-energyUsed*.65;
-
- // Persistent backwards-only motion is explicitly less useful than controlled
- // exploration, but backwards movement is not forbidden.
- if(forwardProgress<-.06)score+=forwardProgress*.8;
+ if(d.stage===0)score=dense*1.8+(o.motor.policyActivity||0)*.6+bodyModelSampleCount(o)*.0008-m.falls*.35;
+ else if(d.stage===1)score=dense*1.5+upr*1.2+contacts*.6+sym*.5-m.falls*.65;
+ else if(d.stage===2)score=dense*1.7+dist*1.3+Math.max(0,forwardProgress)*.45+contacts*.25-m.falls*.55; // crawling may be low/ugly
+ else if(d.stage===3)score=dense*1.5+dist*.85+sym*.9+contacts*.4+upr*.45-m.falls*.7;
+ else if(d.stage===4)score=dense*1.45+Math.max(0,forwardProgress)*1.0+dist*.55+sym*.55+upr*.55-m.falls*.85;
+ else score=dense*1.25+Math.max(0,forwardProgress)*1.8+dist*.55+Math.max(0,dy)*.9+upr*.75+sym*.45-m.falls*1.0;
 
  m.score=score;
- if(score>m.bestScore+.025){
-   m.bestScore=score;m.best=cloneGenome(m.genome);
-   m.confidence=clamp(m.confidence+.04);
-   logEvent(o,`G${m.generation} motor policy kept (${d.stageName}, ${score.toFixed(2)})`,'hot');
+ if(score>m.bestScore+.018){
+   m.bestScore=score;m.best=cloneGenome(m.genome);m.confidence=clamp(m.confidence+.035);m.lastImprovementTime=simTime;
+   logEvent(o,`G${m.generation} policy kept (${d.stageName}, ${score.toFixed(2)})`,'hot');
  }else{
    m.genome=cloneGenome(m.best);
-   logEvent(o,`G${m.generation} motor policy rejected (${score.toFixed(2)})`);
  }
- const base=[.20,.17,.14,.11,.085,.07][d.stage]||.08;
- const amt=Math.max(.035,base-m.generation*.0012);
- m.genome=mutateGenome(m.genome,amt);
- m.generation++;m.collisions=0;m.falls=0;
+
+ const base=[.18,.15,.13,.105,.085,.065,.05][d.stage]||.06;
+ m.genome=mutateGenome(m.genome,Math.max(.028,base-m.generation*.0008));
+
+ // Occasionally graft a remembered successful movement fragment into the new candidate.
+ if(m.fragments.length&&Math.random()<.38){
+   const fr=m.fragments[Math.floor(Math.random()*Math.min(5,m.fragments.length))];
+   const joint=MOTOR_JOINTS[Math.floor(Math.random()*MOTOR_JOINTS.length)];
+   if(fr.policy?.[joint])m.genome.policies[fr.leg][joint]=[...fr.policy[joint]];
+ }
+
+ m.generation++;m.collisions=0;m.falls=0;m.denseAccum=0;
  m.trialX=o.shellBody.position.x;m.trialZ=o.shellBody.position.z;m.trialY=o.shellBody.position.y;m.trialTime=simTime;m.energyStart=o.energy;
 }
 function checkStuck(o,dt){const dx=o.shellBody.position.x-o.lastProgressPos.x,dz=o.shellBody.position.z-o.lastProgressPos.z,d=Math.hypot(dx,dz);if(d>.14){o.lastProgressPos={x:o.shellBody.position.x,z:o.shellBody.position.z};o.stuckTimer=Math.max(0,o.stuckTimer-dt*2)}else o.stuckTimer+=dt;if(o.stuckTimer>2.8&&o.target){adjustInterest(o,o.target.type,-.035);cooldownTarget(o,o.target,3+o.personality.patience*3);logEvent(o,`stuck — gave up on ${o.target.label}`,'bad');o.target=null;o.desiredHeading=shellHeading(o)+rand(1.1,2.5)*(Math.random()<.5?-1:1);o.stuckTimer=0}}
@@ -1115,11 +1279,36 @@ function poseUpright(o,x,z){
 }
 
 function updateEye(o,dt){const eyek=18,eyed=6;o.eyeYawVel+=((o.targetEyeYaw-o.eyeYaw)*eyek-o.eyeYawVel*eyed)*dt;o.eyeYaw+=o.eyeYawVel*dt;o.eyePitchVel+=((o.targetEyePitch-o.eyePitch)*eyek-o.eyePitchVel*eyed)*dt;o.eyePitch+=o.eyePitchVel*dt}
+
+function updateEnvironment(dt){
+  // slow day/night lighting
+  const phase=(simTime/150)%1,day=.5+.5*Math.sin(phase*Math.PI*2-Math.PI/2);
+  sun.intensity=.75+day*1.9;
+  const bg=new THREE.Color().setHSL(.60,.25,.045+day*.055);scene.background.copy(bg);scene.fog.color.copy(bg);
+
+  // gentle changing wind only affects light free props
+  const wx=Math.sin(simTime*.071)*.045,wz=Math.cos(simTime*.053)*.035;
+  for(const it of things){
+    if(!it.active)continue;
+    if(it.dynamic&&['tinyball','ball','lightcube','hanging'].includes(it.type)){
+      it.body.force.x+=wx*it.body.mass;it.body.force.z+=wz*it.body.mass;
+    }
+    if(it.type==='dispenser'){
+      it.meta.dispenserTimer=(it.meta.dispenserTimer??8)-dt;
+      if(it.meta.dispenserTimer<=0){
+        const nearby=things.filter(t=>t.active&&t.type==='food'&&Math.hypot(t.body.position.x-it.body.position.x,t.body.position.z-it.body.position.z)<4).length;
+        if(nearby<4)addThing('food',it.body.position.x+rand(-1.3,1.3),it.body.position.z+rand(-1.3,1.3),.34);
+        it.meta.dispenserTimer=rand(7,14);
+      }
+    }
+  }
+}
+
 function syncThings(){for(const it of things){if(it.active&&it.dynamic)copyPose(it.mesh,it.body)}}
 function syncVisuals(o){o.parts.forEach(({body,mesh})=>copyPose(mesh,body));o.eyeRoot.position.copy(o.shellMesh.position);o.eyeRoot.quaternion.copy(o.shellMesh.quaternion);o.eyeBall.position.set(0,.07,.57);o.eyeBall.rotation.set(o.eyePitch,o.eyeYaw,0)}
 function updateOrb(o,dt){
  o.hunger=clamp(o.hunger+dt*.0034);o.energy=clamp(o.energy-dt*(o.motor.jointError>.35?.0025:.0012));o.safety=clamp(o.safety+dt*.004);
- updateBodySenses(o,dt);updateDevelopment(o,dt);
+ updateBodySenses(o,dt);updateMotorLearning(o,dt);updateDevelopment(o,dt);
  o.thinkTimer-=dt;o.decisionAge+=dt;
  if(o.thinkTimer<=0){
    const s=senses(o);decide(o,s);
@@ -1130,7 +1319,7 @@ function updateOrb(o,dt){
  driveGait(o,dt);checkStuck(o,dt);checkFall(o,dt);interactNearby(o);evaluateMotor(o);updateEye(o,dt)
 }
 function refreshOrbList(){$('popCount').textContent=`(${orbs.length}/20)`;$('orbList').innerHTML='';orbs.forEach(o=>{const row=document.createElement('div');row.className='orbrow'+(o===selected?' selected':'');const s=document.createElement('span');s.textContent=`${o.name} • G${o.motor.generation}`;s.style.fontSize='12px';const b=document.createElement('button');b.textContent='Select';b.addEventListener('click',()=>selectOrb(o));row.append(s,b);$('orbList').append(row)});$('addOrb').disabled=orbs.length>=20;$('removeOrb').disabled=orbs.length<=1}
-function refreshUI(){if(!selected)return;const o=selected,upr=uprightValue(o);$('nameT').textContent=o.name;$('thoughtT').textContent=o.thought;$('genT').textContent=o.motor.generation;$('stageT').textContent=o.development.stageName;$('scoreT').textContent=o.motor.bestScore<=-900?'learning…':o.motor.bestScore.toFixed(2);$('uprightT').textContent=pct(upr);$('massT').textContent=o.shellBody.mass.toFixed(2)+' shell';$('motorOutT').textContent=Math.round((o.motorOutput||0)*100)+'%';$('motorStateT').textContent=(o.motorStallTimer||0)>1.5?'STALLED / BOOSTING':'active';$('feetT').textContent=`${o.lastContactCount}/4`;$('bodyStateT').textContent=o.recoveryMode?'FALLEN / recovering':upr>.72?'upright':'unstable';$('clearanceT').textContent=((o.bodyClearance||0)*100).toFixed(0)+' cm';$('supportT').textContent=Math.round((o.supportReflex||0)*100)+'%';$('separationT').textContent=(legSeparationMetric(o)*100).toFixed(0)+' cm';$('skeletonFixT').textContent=o.skeleton.corrections+(o.skeleton.lastReason!=='none'?' ('+o.skeleton.lastReason+')':'');$('softFixT').textContent=o.skeleton.softFixes;$('gripsT').textContent=o.legs.filter(l=>!!l.grasp).length+'/4';$('timeT').textContent=timeScale+'×';$('gripT').textContent=Math.round(o.legs.reduce((s,l)=>s+(l.grip||0),0)/o.legs.length*100)+'%';const allM=o.legs.flatMap(l=>Object.values(l.muscle));$('muscleT').textContent=Math.round(allM.reduce((s,m)=>s+m.strength,0)/allM.length*100)+'%';$('fatigueT').textContent=Math.round(allM.reduce((s,m)=>s+m.fatigue,0)/allM.length*100)+'%';for(const[k,v]of[['energy',o.energy],['hunger',o.hunger],['safety',o.safety]]){$(k+'T').textContent=pct(v);$(k+'B').style.width=pct(v)}$('visionT').textContent=o.vision;$('visionB').style.width=pct(o.visionStrength);$('smellT').textContent=o.smell;$('smellB').style.width=pct(o.smellStrength);$('vestTilt').textContent=(o.vestibular.tilt*180/Math.PI).toFixed(1)+'°';$('vestSpin').textContent=o.vestibular.angularSpeed.toFixed(2)+' rad/s';$('vestAccel').textContent=o.vestibular.accel.toFixed(2)+' m/s²';$('vestFall').textContent=o.vestibular.falling?'YES':'no';$('propJoint').textContent=Math.round(o.proprio.jointAwareness*100)+'%';$('propContact').textContent=o.proprio.contactCount+'/4';$('propLoad').textContent=Math.round(o.proprio.loadSymmetry*100)+'%';$('propError').textContent=(o.proprio.motorError||0).toFixed(2);$('propLegs').innerHTML=o.proprio.legs.map((l,i)=>{const n=['FL','FR','BL','BR'][i];return `<div><b>${n}</b> knee ${(l.angles.knee*180/Math.PI).toFixed(0)}° • ankle ${(l.angles.ankle*180/Math.PI).toFixed(0)}° • ${l.contact?'ground':'air'} • load ${Math.round(l.load*100)}%</div>`}).join('');$('personalityBadges').innerHTML=Object.entries(o.personality).map(([k,v])=>`<span class="badge"><span class="dot" style="background:hsl(${Math.round(v*120)} 60% 60%)"></span>${k} ${Math.round(v*100)}</span>`).join('');for(const t of['Food','Toy','Marker','Danger','Wall'])$('interest'+t).textContent=(o.interests[t.toLowerCase()]??0).toFixed(2);$('strengthList').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),m=leg.muscle;return `<div style="margin:3px 0"><b>${name}</b> spread ${Math.round(m.abduct.strength*100)}% • hip ${Math.round(m.hip.strength*100)}% • knee ${Math.round(m.knee.strength*100)}% • ankle ${Math.round(m.ankle.strength*100)}% • foot ${Math.round(m.foot.strength*100)}%</div>`}).join('');$('limbHealth').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),st=leg.health.state,cls=st==='normal'?'limb-ok':st==='strained'?'limb-warn':'limb-bad';return `<div class="${cls}"><b>${name}</b> ${st}</div>`}).join('');$('brainLog').innerHTML=o.events.map(e=>`<div class="${e.kind}">[${e.t.toFixed(1)}] ${e.text}</div>`).join('')||'<div>no events yet</div>';$('status').textContent=`${o.name}: ${o.thought}`}
+function refreshUI(){if(!selected)return;const o=selected,upr=uprightValue(o);$('nameT').textContent=o.name;$('thoughtT').textContent=o.thought;$('genT').textContent=o.motor.generation;$('stageT').textContent=o.development.stageName;$('scoreT').textContent=o.motor.bestScore<=-900?'learning…':o.motor.bestScore.toFixed(2);$('uprightT').textContent=pct(upr);$('massT').textContent=o.shellBody.mass.toFixed(2)+' shell';$('motorOutT').textContent=Math.round((o.motorOutput||0)*100)+'%';$('motorStateT').textContent=(o.motorStallTimer||0)>1.5?'STALLED / BOOSTING':'active';$('feetT').textContent=`${o.lastContactCount}/4`;$('bodyStateT').textContent=o.recoveryMode?'FALLEN / recovering':upr>.72?'upright':'unstable';$('clearanceT').textContent=((o.bodyClearance||0)*100).toFixed(0)+' cm';$('supportT').textContent=Math.round((o.supportReflex||0)*100)+'%';$('separationT').textContent=(legSeparationMetric(o)*100).toFixed(0)+' cm';$('skeletonFixT').textContent=o.skeleton.corrections+(o.skeleton.lastReason!=='none'?' ('+o.skeleton.lastReason+')':'');$('softFixT').textContent=o.skeleton.softFixes;$('gripsT').textContent=o.legs.filter(l=>!!l.grasp).length+'/4';$('timeT').textContent=timeScale+'×';$('gripT').textContent=Math.round(o.legs.reduce((s,l)=>s+(l.grip||0),0)/o.legs.length*100)+'%';const allM=o.legs.flatMap(l=>Object.values(l.muscle));$('muscleT').textContent=Math.round(allM.reduce((s,m)=>s+m.strength,0)/allM.length*100)+'%';$('fatigueT').textContent=Math.round(allM.reduce((s,m)=>s+m.fatigue,0)/allM.length*100)+'%';$('denseRewardT').textContent=(o.motor.denseReward||0).toFixed(3);$('exploreT').textContent=(simTime-(o.motor.lastImprovementTime||0)>24)?'BURST':'normal';$('fragmentsT').textContent=o.motor.fragments.length;$('bodyModelT').textContent=bodyModelSampleCount(o);for(const[k,v]of[['energy',o.energy],['hunger',o.hunger],['safety',o.safety]]){$(k+'T').textContent=pct(v);$(k+'B').style.width=pct(v)}$('visionT').textContent=o.vision;$('visionB').style.width=pct(o.visionStrength);$('smellT').textContent=o.smell;$('smellB').style.width=pct(o.smellStrength);$('vestTilt').textContent=(o.vestibular.tilt*180/Math.PI).toFixed(1)+'°';$('vestSpin').textContent=o.vestibular.angularSpeed.toFixed(2)+' rad/s';$('vestAccel').textContent=o.vestibular.accel.toFixed(2)+' m/s²';$('vestFall').textContent=o.vestibular.falling?'YES':'no';$('propJoint').textContent=Math.round(o.proprio.jointAwareness*100)+'%';$('propContact').textContent=o.proprio.contactCount+'/4';$('propLoad').textContent=Math.round(o.proprio.loadSymmetry*100)+'%';$('propError').textContent=(o.proprio.motorError||0).toFixed(2);$('propLegs').innerHTML=o.proprio.legs.map((l,i)=>{const n=['FL','FR','BL','BR'][i];return `<div><b>${n}</b> knee ${(l.angles.knee*180/Math.PI).toFixed(0)}° • ankle ${(l.angles.ankle*180/Math.PI).toFixed(0)}° • ${l.contact?'ground':'air'} • load ${Math.round(l.load*100)}%</div>`}).join('');$('personalityBadges').innerHTML=Object.entries(o.personality).map(([k,v])=>`<span class="badge"><span class="dot" style="background:hsl(${Math.round(v*120)} 60% 60%)"></span>${k} ${Math.round(v*100)}</span>`).join('');for(const t of['Food','Toy','Marker','Danger','Wall'])$('interest'+t).textContent=(o.interests[t.toLowerCase()]??0).toFixed(2);$('strengthList').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),m=leg.muscle;return `<div style="margin:3px 0"><b>${name}</b> spread ${Math.round(m.abduct.strength*100)}% • hip ${Math.round(m.hip.strength*100)}% • knee ${Math.round(m.knee.strength*100)}% • ankle ${Math.round(m.ankle.strength*100)}% • foot ${Math.round(m.foot.strength*100)}%</div>`}).join('');$('limbHealth').innerHTML=o.legs.map((leg,i)=>{const name=(leg.front>0?'F':'B')+(leg.side<0?'L':'R'),st=leg.health.state,cls=st==='normal'?'limb-ok':st==='strained'?'limb-warn':'limb-bad';return `<div class="${cls}"><b>${name}</b> ${st}</div>`}).join('');$('brainLog').innerHTML=o.events.map(e=>`<div class="${e.kind}">[${e.t.toFixed(1)}] ${e.text}</div>`).join('')||'<div>no events yet</div>';$('status').textContent=`${o.name}: ${o.thought}`}
 function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,r.width),h=Math.max(1,r.height),pr=renderer.getPixelRatio();if(canvas.width!==Math.floor(w*pr)||canvas.height!==Math.floor(h*pr)){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}}
 function clearWorld(){orbs.slice().forEach(destroyOrb);things.forEach(removeThing);things.length=0;selected=null;nextOrbId=1;nextThingId=1}
 
@@ -1152,9 +1341,9 @@ function serializeOrb(o){
     longMem:memoryToJSON(o.longMem),
     motor:{
       genome:o.motor.genome,best:o.motor.best,bestScore:o.motor.bestScore,
-      generation:o.motor.generation,confidence:o.motor.confidence
+      generation:o.motor.generation,confidence:o.motor.confidence,fragments:o.motor.fragments,lastImprovementTime:o.motor.lastImprovementTime
     },
-    strengths:o.legs.map(l=>l.strengths),muscles:o.legs.map(l=>l.muscle),development:o.development
+    strengths:o.legs.map(l=>l.strengths),muscles:o.legs.map(l=>l.muscle),development:o.development,bodyModel:o.learning.bodyModel
   };
 }
 function serializeThing(t){
@@ -1212,6 +1401,9 @@ function restoreOrb(s){
     if(Number.isFinite(s.motor.confidence))o.motor.confidence=s.motor.confidence;
   }
   if(s.development)o.development={...o.development,...s.development};
+  if(Array.isArray(s.bodyModel)&&s.bodyModel.length===4)o.learning.bodyModel=s.bodyModel;
+  if(s.motor&&Array.isArray(s.motor.fragments))o.motor.fragments=s.motor.fragments.slice(0,12);
+  if(s.motor&&Number.isFinite(s.motor.lastImprovementTime))o.motor.lastImprovementTime=s.motor.lastImprovementTime;
   if(Array.isArray(s.muscles)){o.legs.forEach((l,i)=>{if(s.muscles[i])l.muscle={...l.muscle,...s.muscles[i]}});}
   if(Array.isArray(s.strengths)){
     o.legs.forEach((l,i)=>{if(s.strengths[i])l.strengths={...l.strengths,...s.strengths[i]}});
@@ -1261,38 +1453,66 @@ function loadWorld(){
 function resetWorld(){
  clearWorld();
 
- // Food / hazards
- addThing('food',-5,-3,.55);addThing('food',4,-5,.48);addThing('food',6,4,.62);
- addThing('danger',-7,6,.62);addThing('danger',2,8,.50);
+ // CENTER: open field + social clearing
+ addThing('marker',0,0,.42);addThing('toy',2.2,1.0,.48);addThing('toy',-2.0,1.3,.45);
+ addThing('food',-3,-2,.42);addThing('food',3,-3,.42);addThing('food',1,4,.42);
 
- // Static obstacles
- addThing('wall',-3,2,.85);addThing('wall',4,2,.75);
+ // NURSERY: tiny challenges for newborn motor babbling
+ for(let i=0;i<5;i++)addThing('platform',-8+i*1.7,-8,.48+i*.05,.14+i*.10);
+ addThing('slope',-1.5,-9,1.0,.20);addThing('spring',2,-9,.70,.09);addThing('tinyball',4,-9,.55);
 
- // Pushable physics playground
- addThing('pushblock',2,-2,.72);
- addThing('pushblock',3.2,-2.4,.60);
- addThing('ball',-2,-1,.70);
- addThing('ball',-3.2,-1.6,.50);
- addThing('log',1,4,.85);
+ // TERRACED HILL
+ addThing('platform',-14,-3,1.15,.30);addThing('platform',-14,0,1.25,.52);addThing('platform',-14,3,1.35,.78);
+ addThing('platform',-14,6,1.45,1.06);addThing('slope',-10.5,4.7,1.15,.38);
 
- // Layered terrain / low terraces. Heights stay modest so a learner can discover them.
- addThing('platform',-7,-2,1.25,.34);
- addThing('platform',-7,1,1.30,.58);
- addThing('platform',-7,4,1.35,.84);
- addThing('platform',7,-4,1.10,.30);
- addThing('platform',7,-1.3,1.15,.52);
- addThing('platform',7,1.5,1.20,.74);
+ // ROCK GARDEN / STEPPING STONES
+ for(let i=0;i<10;i++)addThing('platform',-17+i*1.55,12+Math.sin(i)*1.1,.34+rand(0,.22),rand(.16,.48));
 
- addThing('toy',5,0,.55);addThing('marker',-5,1,.48);
- const o=createOrbsight(0,0);selectOrb(o);updateObjectCount()
+ // CLIMB WALL + LEDGES
+ addThing('wall',15,5,.65);addThing('wall',15,7,.65);addThing('wall',15,9,.65);
+ addThing('platform',13.2,5,.62,.42);addThing('platform',13.2,7,.62,.76);addThing('platform',13.2,9,.62,1.10);
+ addThing('hanging',11.5,8,.55,2.0);
+
+ // PHYSICS YARD
+ addThing('lightcube',9,-7,.72);addThing('pushblock',11,-7,.72);addThing('heavycube',13,-7,.72);
+ addThing('tinyball',8,-10,.72);addThing('ball',10,-10,.72);addThing('bigball',13,-10,.72);
+ addThing('log',15,-9,.85);addThing('cylinder',16.5,-6,.80);addThing('plank',12,-4,.90);addThing('seesaw',16,-3,.95);
+
+ // LOW TUNNEL: roof made from high platforms + side walls
+ addThing('wall',0,15,.45);addThing('wall',5,15,.45);
+ addThing('platform',2.5,15,1.65,1.18);addThing('platform',2.5,18,1.65,1.18);
+
+ // NARROW BRIDGE
+ for(let z=-1;z<=7;z+=1.4)addThing('platform',22,z,.34,.52);
+ addThing('bumper',22,8.5,.55);
+
+ // RUIN MAZE
+ const maze=[[-6,21],[-3,21],[0,21],[3,21],[-6,24],[0,24],[6,24],[-3,27],[0,27],[3,27],[6,27]];
+ maze.forEach(([x,z])=>addThing('wall',x,z,.46));
+
+ // FOOD GROVE / shelter-ish obstacles
+ for(let i=0;i<7;i++){const a=i/7*Math.PI*2;addThing('food',-20+Math.cos(a)*3,-18+Math.sin(a)*3,.36)}
+ addThing('log',-18,-18,.9);addThing('log',-22,-16,.8);addThing('dispenser',-20,-20,.6);
+
+ // MOVABLE ROUTE BUILDING AREA
+ addThing('plank',-7,-19,1.0);addThing('ramp',-4,-19,.9);addThing('lightcube',-1,-19,.65);addThing('lightcube',1,-19,.65);
+ addThing('spring',4,-19,.7);
+
+ // DANGER / trench-like lowland boundary
+ addThing('danger',18,17,.55);addThing('danger',20,20,.55);addThing('danger',17,22,.55);
+ for(let x=12;x<=24;x+=3)addThing('platform',x,24,1.0,.36);
+ for(let z=14;z<=23;z+=3)addThing('platform',24,z,1.0,.36);
+
+ // A few Orbsights so social behavior is immediately visible
+ const a=createOrbsight(0,0);createOrbsight(1.5,0);createOrbsight(-1.5,.5);selectOrb(a);updateObjectCount()
 }
 function removeSelected(){if(selected&&orbs.length>1)destroyOrb(selected)}
 $('pause').addEventListener('click',e=>{paused=!paused;e.currentTarget.textContent=paused?'Resume':'Pause'});
 $('timeScale').addEventListener('change',e=>{timeScale=THREE.MathUtils.clamp(Number(e.target.value)||1,.5,15);physicsAccumulator=0;});
 $('saveNow').addEventListener('click',()=>saveWorld(true));
-$('loadNow').addEventListener('click',()=>loadWorld());$('follow').addEventListener('click',e=>{follow=!follow;e.currentTarget.textContent=`Follow selected: ${follow?'ON':'OFF'}`});$('reset').addEventListener('click',resetWorld);$('reloadBuild').addEventListener('click',()=>{const u=new URL(location.href);u.searchParams.set('build',BUILD+'-'+Date.now());location.href=u.toString()});$('addOrb').addEventListener('click',()=>{const o=createOrbsight(rand(-4,4),rand(-4,4));if(o)selectOrb(o)});$('removeOrb').addEventListener('click',removeSelected);$('addObject').addEventListener('click',()=>{const t=$('objectType').value;const dyn=(t==='ball'||t==='pushblock'||t==='log');const r=(t==='wall'||t==='platform')?1:(dyn?0.72:0.55);addThing(t,Number($('objX').value),Number($('objZ').value),r)});$('randomObject').addEventListener('click',()=>{const t=$('objectType').value;const dyn=(t==='ball'||t==='pushblock'||t==='log');const r=(t==='wall'||t==='platform')?1:(dyn?0.72:0.55);addThing(t,rand(-17,17),rand(-17,17),r)});
+$('loadNow').addEventListener('click',()=>loadWorld());$('follow').addEventListener('click',e=>{follow=!follow;e.currentTarget.textContent=`Follow selected: ${follow?'ON':'OFF'}`});$('reset').addEventListener('click',resetWorld);$('reloadBuild').addEventListener('click',()=>{const u=new URL(location.href);u.searchParams.set('build',BUILD+'-'+Date.now());location.href=u.toString()});$('addOrb').addEventListener('click',()=>{const o=createOrbsight(rand(-4,4),rand(-4,4));if(o)selectOrb(o)});$('removeOrb').addEventListener('click',removeSelected);$('addObject').addEventListener('click',()=>{const t=$('objectType').value;const big=['wall','platform','slope','plank','ramp','seesaw'].includes(t);addThing(t,Number($('objX').value),Number($('objZ').value),big?1:.62)});$('randomObject').addEventListener('click',()=>{const t=$('objectType').value;const big=['wall','platform','slope','plank','ramp','seesaw'].includes(t);addThing(t,rand(-29,29),rand(-29,29),big?1:.62)});
 canvas.addEventListener('pointerdown',ev=>{const r=canvas.getBoundingClientRect();mouse.x=((ev.clientX-r.left)/r.width)*2-1;mouse.y=-((ev.clientY-r.top)/r.height)*2+1;ray.setFromCamera(mouse,camera);const hits=ray.intersectObjects(orbs.map(o=>o.shellMesh),false);if(hits.length){const o=orbs.find(x=>x.shellMesh===hits[0].object);if(o)selectOrb(o)}});window.addEventListener('resize',resize);
-resetWorld();const clock=new THREE.Clock();let uiTimer=0;const FIXED_DT=1/120;function frame(){requestAnimationFrame(frame);const realDt=Math.min(.05,clock.getDelta());resize();if(!paused){physicsAccumulator+=realDt*timeScale;let steps=0;while(physicsAccumulator>=FIXED_DT&&steps<90){simTime+=FIXED_DT;orbs.forEach(o=>updateOrb(o,FIXED_DT));world.step(FIXED_DT);orbs.forEach(o=>enforceSkeleton(o,FIXED_DT));physicsAccumulator-=FIXED_DT;steps++}if(steps>=90)physicsAccumulator=0;orbs.forEach(syncVisuals);syncThings()}uiTimer-=realDt;if(uiTimer<=0){refreshUI();refreshOrbList();uiTimer=.25}if(follow&&selected){const p=selected.shellMesh.position,des=new THREE.Vector3(p.x+7.2,p.y+5.3,p.z+8.5);camera.position.lerp(des,.022);controls.target.lerp(new THREE.Vector3(p.x,p.y,p.z),.045)}controls.update();renderer.render(scene,camera)}frame();
+resetWorld();const clock=new THREE.Clock();let uiTimer=0;const FIXED_DT=1/120;function frame(){requestAnimationFrame(frame);const realDt=Math.min(.05,clock.getDelta());resize();if(!paused){physicsAccumulator+=realDt*timeScale;let steps=0;while(physicsAccumulator>=FIXED_DT&&steps<90){simTime+=FIXED_DT;orbs.forEach(o=>updateOrb(o,FIXED_DT));updateEnvironment(FIXED_DT);world.step(FIXED_DT);orbs.forEach(o=>enforceSkeleton(o,FIXED_DT));physicsAccumulator-=FIXED_DT;steps++}if(steps>=90)physicsAccumulator=0;orbs.forEach(syncVisuals);syncThings()}uiTimer-=realDt;if(uiTimer<=0){refreshUI();refreshOrbList();uiTimer=.25}if(follow&&selected){const p=selected.shellMesh.position,des=new THREE.Vector3(p.x+7.2,p.y+5.3,p.z+8.5);camera.position.lerp(des,.022);controls.target.lerp(new THREE.Vector3(p.x,p.y,p.z),.045)}controls.update();renderer.render(scene,camera)}frame();
 }catch(e){console.error(e);err.hidden=false;errText.textContent=(e&&e.stack)||e?.message||String(e);$('status').textContent='startup error — see panel'}
 </script>
 </body></html>

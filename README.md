@@ -747,3 +747,91 @@ Catastrophic resets should normally stay at zero.
 - Useful repeated movement strengthens joints faster.
 - Muscle cap increased to 160%; fatigue is slightly less punishing and recovers faster.
 - Time scale is saved with the local world.
+
+
+# Orbsight v0.9 — World + Motor Development
+
+## World expansion
+The map is now roughly 72×72 and contains distinct areas:
+- open field / social clearing
+- nursery with tiny steps, slope, spring pad, and ball
+- terraced hill
+- rocky stepping-stone garden
+- climbing wall and ledges
+- physics yard
+- low tunnel
+- narrow bridge
+- ruin maze
+- food grove
+- route-building area with planks and ramps
+- dangerous boundary / trench-like lowland section
+
+New physics/environment objects include:
+- light cube
+- heavy cube
+- tiny / normal / large balls
+- plank
+- movable ramp
+- seesaw
+- hanging toy
+- spring pad
+- bumper
+- rolling cylinder
+- food dispenser
+- slope
+
+There is also a slow day/night lighting cycle and gentle wind affecting light props.
+
+## Developmental motor learning
+The old "mutate a whole gait and score it later" approach is replaced with a more developmental system.
+
+Stages:
+1. body discovery
+2. ground support
+3. crawling
+4. weight transfer
+5. stepping
+6. walking
+7. free locomotion
+
+Crawling does NOT require an upright body.
+
+## Body model
+Every joint gradually learns three crude causal effects from experience:
+- forward body movement
+- vertical lift
+- support/contact change
+
+These learned effects become inputs to the motor policy.
+
+## Motor babbling
+During body discovery, one joint at a time receives stronger short exploratory activation.
+This gives the body model cleaner cause/effect examples.
+
+## Dense reward
+Learning now receives tiny continuous rewards for:
+- useful horizontal motion
+- forward progress
+- upward progress
+- making new contacts
+- maintaining support
+- improving body orientation
+
+Violent spinning and large motor error are mildly penalized.
+
+## Local mutation
+Only a few policy weights are mutated at once.
+A useful front-left knee discovery is no longer destroyed just because the system wants to
+experiment with the back-right ankle.
+
+## Motor fragments
+Successful short movement fragments are stored.
+Later generations can graft pieces of those successful policies back into new candidates.
+
+## Exploration bursts
+If an Orbsight goes about 24 simulated seconds without improving its best policy, it temporarily
+increases structured motor exploration instead of repeating the same mediocre strategy forever.
+
+## Persistence
+Body model, developmental stage, motor fragments, muscle strength, personality, memory,
+interests, world objects, and time scale continue to save in localStorage.
