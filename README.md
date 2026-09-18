@@ -1,102 +1,81 @@
-# Orbsight v0.3
+# Orbsight v0.3.3 — rigid-body rebuild
 
-GitHub Pages prototype of the fictional simulated creature **Orbsight**.
+This version is a deliberate rebuild of locomotion. It removes the old fake walk/ground-clipping approach.
 
-## Major changes
+## Important: replace the old project root
 
-### Population panel
-- Spawn up to **20 Orbsights**
-- Select any Orbsight to inspect its mind
-- Remove the selected Orbsight
-- Each creature has separate personality, memory, interests, and motor learning
+This ZIP contains only:
+- `index.html`
+- `README.md`
 
-### Editable world
-You can add:
-- food
-- danger
-- blocks
-- toys
-- markers
+For GitHub Pages, replace the old `index.html` with this one. Old `main.js` or `style.css` files are no longer used, so they cannot override the brain.
 
-Objects can be placed at chosen X/Z coordinates or randomly.
+The page visibly reports:
+- Brain: `0.3.3 motor-brain`
+- Physics: `cannon-es rigid-body + motorized hinges`
+- Runtime build ID
 
-### Personality
-Every Orbsight now has persistent values for:
-- curiosity
-- bravery
-- stubbornness
-- sociability
-- patience
-- playfulness
+If those values appear, the new code is running.
 
-These affect target choice and behavior.
+## Locomotion changes
 
-### Interest fix
-Interests are no longer a permanent "go toward this forever" command.
-- repeated blocked approaches reduce interest
-- recently failed targets receive cooldowns
-- stuck detection forces a new direction
-- good outcomes raise interest
-- danger lowers its learned value
-- personality and needs alter target scores
+Each Orbsight now has separate physical bodies for:
+- 1 lightweight shell/body
+- 4 upper legs
+- 4 lower legs
+- 4 plantigrade feet
 
-### Learning
-Two kinds are present in v0.3:
+That is 13 rigid bodies per Orbsight.
 
-1. **Experience learning**
-   - object interests change from outcomes
-   - locations/events enter memory
-   - blocked routes temporarily lose priority
+Each leg has 3 real motorized hinge constraints:
+- hip
+- knee
+- ankle
 
-2. **Motor learning**
-   - there is no fixed pre-authored walking animation
-   - the brain controls hip, knee, ankle, and foot joints on all four legs
-   - each creature starts with an imperfect gait parameter set
-   - every trial window the simulation scores real displacement, balance, and collisions
-   - useful gait changes are kept; worse changes are rolled back
-   - the gait is then mutated again
-   - motor confidence rises as successful trials accumulate
+The brain chooses target angles. Hinge motors apply limited torque. The physics engine decides whether the leg can actually move there.
 
-This is intentionally a simplified artificial-learning model, not biological neurons or full rigid-body physics yet.
+**Forward movement is never added directly to Orbsight's position.** It only travels when its physical feet push against the ground with friction.
 
-## Roadmap
+## Floor clipping
 
-### v0.4
-- real image input from the eye camera
-- no direct object labels for vision
-- language / reading
-- learned physical communication using eye and body movements
+The floor is a rigid physics collider. Feet are physical box colliders and the visible feet copy those collider transforms every frame. This is intended to eliminate the repeated visual animation-through-the-floor problem from earlier versions.
+
+## Body weight
+
+The large shell looks heavy but has a mass of only `1.15` physics units. Each limb segment is much lighter. The legs use limited motor force rather than unlimited animation strength.
+
+## Motor learning
+
+Every 7.5 seconds, a gait trial is scored using:
+- actual physical distance moved
+- uprightness
+- collisions
+- falls
+- energy used
+- joint-control error
+
+Better gait genomes are kept. Worse ones are reverted, then mutated again. Each Orbsight learns independently.
+
+## Falling / recovery
+
+Falling is detected from the shell's real physics orientation and height. The motor brain first tries an extended-leg recovery posture. If it still cannot recover after several seconds, the lab resets it upright and heavily penalizes that gait.
+
+## Brain verification
+
+The Brain Event Log shows events such as:
+- gait accepted/rejected
+- collisions
+- eating
+- getting stuck
+- falling
+- recovery
+
+This makes it possible to verify that the newer mind is actually executing instead of only seeing a changed tab title.
 
 ## GitHub Pages
-Upload `index.html` to a repo root and enable:
 
-Settings -> Pages -> Deploy from branch -> main / root
+Upload `index.html` at the repo root, then enable:
 
-Three.js is loaded from jsDelivr, so an internet connection is required.
+`Settings -> Pages -> Deploy from a branch -> main / root`
 
-
-## v0.3.1 physics patch
-- Limb joints now use spring-damper angular physics rather than snapping directly to desired rotations.
-- Every hip, knee, ankle, and foot joint has:
-  - angular position
-  - angular velocity
-  - target angle
-  - joint limits
-  - spring strength
-  - damping
-- Feet estimate ground contact and the body receives support force from contact.
-- Main shell/body mass is intentionally low so the small legs can move it.
-- The body has gravity, vertical velocity, support force, spring stabilization, and damping.
-- Limb/foot clipping into the floor is reduced by lifting the body based on measured foot penetration.
-- Motor-learning still supplies joint targets, but physics determines whether the body actually follows them.
-
-
-## v0.3.2 balance / falling patch
-- Fixed the visible page heading so it now says v0.3.2 instead of only changing the browser tab.
-- Added support-polygon-style balance estimation from feet touching the ground.
-- Body tilt now has angular velocity, spring response, damping, and stress from turning/motion.
-- Poor support can make an Orbsight wobble, tip, and genuinely fall.
-- Falling stops locomotion and penalizes the current gait during motor learning.
-- Fallen Orbsights attempt a simple self-righting recovery instead of instantly teleporting upright.
-- Balance and body state are visible in the selected-Orbsight debug panel.
-- The shell remains deliberately lightweight so the small plantigrade legs can support it.
+Three.js and cannon-es are loaded from pinned jsDelivr modules, so the page needs internet access.
