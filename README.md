@@ -1,63 +1,74 @@
-# Orbsight v0.12 — Posture Brain
+# Orbsight v0.13 — Rapier Joint Rebuild
 
-This update does what the previous physics-only fixes did not: the Orbsight's MIND explicitly
-recognizes curling as a bad strategy and deliberately stops doing it.
-
-## Engine files
+Stable filenames from now on:
 - index.html
-- main-v012.js
-- physics-v012.js
-- mind-v012.js
-- world-v012.js
+- main.js
+- physics.js
+- mind.js
+- world.js
+- README.md
 
-## Posture brain
-Each leg gets a continuous curl score based on:
-- foot distance to shell
-- sideways tuck distance
-- knee flexion
-- hip flexion
-- ankle extremity
+## Why this rebuild exists
+The Cannon-based versions repeatedly curled their legs despite:
+- velocity limit guards
+- collision spacing
+- redesigned geometry
+- explicit anti-curl brain rules
 
-The mind combines those into a whole-body curl score.
+The root problem was that Cannon's HingeConstraint did not give this project the hard lower/upper
+angular stops it needed. The project accumulated scripts trying to imitate anatomy.
 
-States:
-- normal
-- uncurl
-- stance
+## New physics foundation
+v0.13 moves creature physics to Rapier 3D.
 
-If curling becomes moderate/severe, the brain enters `uncurl`.
+Each leg uses actual revolute joints with Rapier-enforced limits:
+- spread
+- hip
+- knee
+- ankle
+- foot roll
 
-## What uncurl does
-Without teleporting anything, the mind commands:
-- hips outward
-- hips slightly extended
-- knees more open
-- ankles neutral
-- feet level
+The brain still chooses motor targets, but Rapier is the final authority on whether a joint may
+rotate any farther.
 
-Motor babbling is suspended while uncurling.
-Climbing grips are not started during posture trouble, and existing grips release.
+## Geometric leg construction
+Leg segments are created from actual hip → knee → ankle geometry. All segments begin with the same
+outward splay rotation so their local revolute axes align correctly.
 
-Once the legs are clear, the mind holds a stable stance briefly before returning to exploration.
+The body plan is:
+shell → spread joint → hip mount → hip joint → upper leg → knee → lower leg → ankle → foot roll → foot
 
-## Learned curl aversion
-Every curl episode increases a persistent-in-runtime aversion value.
+## 3-second newborn settling period
+For the first three simulated seconds:
+- learning is paused
+- babbling is paused
+- neutral joint targets are used
+- gravity and the real joint limits are allowed to settle the skeleton
 
-As aversion rises:
-- policy outputs that flex a curled knee farther are suppressed
-- inward hip/abduction commands are suppressed
-- curled movement receives a much larger reward penalty
-- a curled trial is NEVER allowed to become the saved best policy, even if it moved quickly
+After settling, normal developmental learning begins.
 
-This closes the exploit where a curled controller could move enough to be selected as "successful."
+## Mind simplification
+v0.13 removes the giant anti-curl brain subsystem. The skeleton should physically prevent impossible
+curling, so the mind can focus again on:
+- body discovery
+- support
+- crawling
+- weight transfer
+- stepping
+- walking
+- free locomotion
 
-## Telemetry
-Selected Orbsights now show:
-- Posture brain state
-- Curl score
-- Curl aversion
-- Curl episodes
-- Successful uncurl recoveries
+## Preserved
+- 0.5x–15x simulation speed
+- freecam
+- remove selected
+- mattresses/sleep
+- thought bubbles
+- preset communication
+- motor babbling
+- local evolutionary policy mutation
+- expanded terrain and physics objects
 
-All v0.11 systems remain: redesigned legs, freecam, remove selected, sleep, thoughts/chat,
-developmental motor learning, climbing, and the expanded world.
+## Note
+The browser imports `@dimforge/rapier3d-compat` 0.20.0 from jsDelivr. The compat build embeds its
+WASM, which is convenient for GitHub Pages.

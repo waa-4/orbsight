@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.12 — Posture Brain</title>
+<title>Orbsight v0.13 — Rapier Joint Rebuild</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
-#app{display:grid;grid-template-columns:minmax(0,1fr) 350px;height:100vh}
+#app{display:grid;grid-template-columns:minmax(0,1fr) 355px;height:100vh}
 #view{position:relative;min-width:0}canvas{display:block;width:100%;height:100%}
 #side{overflow:auto;padding:12px;background:#111923;border-left:1px solid #253140}
 h1{font-size:18px;margin:0 0 4px}h1 span{color:#9ed5ff}.small{font-size:12px;color:#aeb9c6;line-height:1.35}
@@ -16,26 +16,26 @@ h1{font-size:18px;margin:0 0 4px}h1 span{color:#9ed5ff}.small{font-size:12px;col
 button,select,input{background:#202d3b;color:#eef5fb;border:1px solid #34485d;border-radius:7px;padding:7px 9px;font-size:12px}
 button{cursor:pointer}.kv{display:grid;grid-template-columns:1fr auto;gap:5px 10px;font-size:12px}.kv b{font-weight:650;text-align:right}
 #orbList{display:grid;gap:5px}.orbrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px;border-radius:7px;background:#101720}
-.orbrow.selected{outline:1px solid #73b5e8}.grid3{display:grid;grid-template-columns:1.2fr .7fr .7fr;gap:6px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.orbrow.selected{outline:1px solid #73b5e8}.grid3{display:grid;grid-template-columns:1.2fr .7fr .7fr;gap:6px}
 label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:100%;margin-top:3px}
 #err{position:absolute;left:10px;right:10px;bottom:10px;background:#4a1818;border:1px solid #a94a4a;padding:10px;border-radius:8px;white-space:pre-wrap;font:12px monospace;z-index:5}
 #status{position:absolute;left:12px;top:10px;padding:6px 9px;border-radius:8px;background:rgba(8,13,19,.78);font-size:12px;pointer-events:none}
-@media(max-width:800px){#app{grid-template-columns:1fr;grid-template-rows:minmax(55vh,1fr) auto;height:auto;min-height:100vh}#view{height:62vh}#side{border-left:0;border-top:1px solid #253140;max-height:none}}
+@media(max-width:800px){#app{grid-template-columns:1fr;grid-template-rows:minmax(55vh,1fr) auto;height:auto;min-height:100vh}#view{height:62vh}#side{border-left:0;border-top:1px solid #253140}}
 </style>
 <script type="importmap">
 {"imports":{
 "three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
 "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
-"cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"
+"rapier":"https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.20.0/+esm"
 }}
 </script>
 </head>
 <body>
 <div id="app">
-  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.10…</div><div id="err" hidden></div></div>
+  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.13…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.12</span></h1>
-    <div class="small">Five-file engine rebuild. index.html only contains UI/CSS; physics, mind, world, and bootstrap code are separate.</div>
+    <h1>Orbsight <span>v0.13</span></h1>
+    <div class="small">New physics foundation: real Rapier revolute joint limits. Same stable filenames from now on.</div>
 
     <div class="sec"><h3>Simulation</h3>
       <div class="buttons">
@@ -43,9 +43,13 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
         <label style="display:flex;align-items:center;gap:5px">Time
           <select id="timeScale" style="width:auto;margin:0"><option>.5</option><option selected>1</option><option>2</option><option>5</option><option>10</option><option>15</option></select>
         </label>
-        <button id="addOrb">Add Orbsight</button><button id="removeOrb">Remove selected</button><button id="freecam">Freecam</button><button id="reset">Reset world</button>
+        <button id="addOrb">Add Orbsight</button>
+        <button id="removeOrb">Remove selected</button>
+        <button id="freecam">Freecam</button>
+        <button id="reset">Reset world</button>
       </div>
-      <div class="small" id="buildT" style="margin-top:7px"></div><div class="small">Freecam: button or F. WASD moves, Q/E down/up, mouse still rotates and pans.</div>
+      <div class="small" id="buildT" style="margin-top:7px"></div>
+      <div class="small">Freecam: F or button. WASD move, Q/E down/up, mouse rotates/pans.</div>
     </div>
 
     <div class="sec"><h3>World objects</h3>
@@ -76,10 +80,9 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
       <span>Motor generation</span><b id="genT">—</b>
       <span>Dense reward</span><b id="rewardT">—</b>
       <span>Motor fragments</span><b id="fragmentsT">—</b>
-      <span>Joint guards</span><b id="guardsT">—</b>
-      <span>Fold risk</span><b id="foldT">—</b>
-      <span>Active grips</span><b id="gripsT">—</b>
-      <span>Sleeping</span><b id="sleepT">—</b><span>Posture brain</span><b id="postureT">—</b><span>Curl score</span><b id="curlT">—</b><span>Curl aversion</span><b id="aversionT">—</b>
+      <span>Settling</span><b id="settleT">—</b>
+      <span>Joint engine</span><b id="engineT">Rapier hard limits</b>
+      <span>Sleeping</span><b id="sleepT">—</b>
     </div></div>
 
     <div class="sec"><h3>Joint diagnostics</h3><div id="jointT" class="small">—</div></div>
@@ -87,36 +90,13 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
   </aside>
 </div>
 <script>
-(async function(){
+(async()=>{
   const status=document.getElementById("status"),err=document.getElementById("err");
-  function fail(label,e){
-    const detail=(e&&e.stack)?e.stack:String(e);
-    status.textContent="v0.12 failed while loading "+label;
-    err.hidden=false;
-    err.textContent="FAILED MODULE: "+label+"\n\n"+detail+
-      "\n\nThis build uses brand-new module filenames, so an old cached v0.10.x file cannot be reused.";
-  }
-  window.addEventListener("error",e=>fail("runtime",e.error||e.message));
-  window.addEventListener("unhandledrejection",e=>fail("promise",e.reason));
-
-  if(location.protocol==="file:"){
-    fail("file:// launch","Open this through GitHub Pages / HTTP(S), not by double-clicking index.html.");
-    return;
-  }
-
-  try{
-    status.textContent="checking physics-v012.js…";
-    await import("./physics-v012.js");
-    status.textContent="checking world-v012.js…";
-    await import("./world-v012.js");
-    status.textContent="checking mind-v012.js…";
-    await import("./mind-v012.js");
-    status.textContent="starting main-v012.js…";
-    await import("./main-v012.js");
-  }catch(e){
-    const current=status.textContent.replace("checking ","").replace("starting ","").replace("…","");
-    fail(current||"unknown module",e);
-  }
+  function fail(e){status.textContent="v0.13 failed to start";err.hidden=false;err.textContent=(e&&e.stack)?e.stack:String(e)}
+  window.addEventListener("error",e=>fail(e.error||e.message));
+  window.addEventListener("unhandledrejection",e=>fail(e.reason));
+  if(location.protocol==="file:"){fail("Run this through GitHub Pages / HTTP(S), not file://.");return}
+  try{await import("./main.js")}catch(e){fail(e)}
 })();
 </script>
 </body>
