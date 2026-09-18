@@ -456,3 +456,62 @@ and lifts for a shorter portion.
 
 ## Anti-folding
 The complete v0.5 hard-stop skeleton and anti-merge validator remain enabled.
+
+
+# v0.5.2 — Soft Muscles + Strength Growth
+
+This update makes the legs deliberately more compliant and animal-like while keeping the v0.5
+hard skeleton rules that prevent folding and merging.
+
+## Floppier limbs
+Joint motors are no longer treated like rigid servos.
+
+Each joint now behaves more like a spring-damper muscle:
+- softer pull toward the brain's requested angle
+- more response to actual joint angular velocity
+- lower maximum motor speed
+- lower immediate pose authority
+- less limb damping, so legs can swing naturally
+- longer planted phase and shorter swing phase
+
+The skeleton is therefore allowed to wobble, sag, and react to contact, but it still cannot
+enter anatomically impossible folded/merged states.
+
+## Muscle adaptation
+Each individual joint has its own adaptive muscle strength:
+- hip spread
+- hip swing
+- knee
+- ankle
+- foot
+
+New muscles begin at about 58% strength.
+
+A muscle only gets stronger when:
+1. it is actually being commanded,
+2. the joint is physically moving,
+3. the motion continues long enough to count as useful exercise.
+
+Simply pushing against a stuck joint does not train it.
+
+Strength rises very slowly with repeated use and is capped at 130%.
+
+## Fatigue
+Active muscles accumulate temporary fatigue.
+Fatigue reduces their available strength a little, then recovers while the joint is less active.
+This prevents a permanently rigid maximum-force posture and gives movement more natural variation.
+
+## Persistence
+Adaptive muscle strengths and fatigue state are included in the browser save so an individual
+Orbsight can genuinely develop a stronger body over time instead of resetting on reload.
+
+## Feet
+High-grip plantar contact remains enabled and friction is increased again.
+Grip only resists slipping; it does not add artificial forward movement.
+
+## Safety
+The v0.5 hard anatomical validator remains the final authority:
+- knees cannot invert
+- joints cannot exceed anatomical stops
+- legs cannot remain inside the shell
+- separate legs cannot remain geometrically merged
