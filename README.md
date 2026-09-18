@@ -89,3 +89,14 @@ Three.js is loaded from jsDelivr, so an internet connection is required.
 - The body has gravity, vertical velocity, support force, spring stabilization, and damping.
 - Limb/foot clipping into the floor is reduced by lifting the body based on measured foot penetration.
 - Motor-learning still supplies joint targets, but physics determines whether the body actually follows them.
+
+
+## v0.3.2 balance / falling patch
+- Fixed the visible page heading so it now says v0.3.2 instead of only changing the browser tab.
+- Added support-polygon-style balance estimation from feet touching the ground.
+- Body tilt now has angular velocity, spring response, damping, and stress from turning/motion.
+- Poor support can make an Orbsight wobble, tip, and genuinely fall.
+- Falling stops locomotion and penalizes the current gait during motor learning.
+- Fallen Orbsights attempt a simple self-righting recovery instead of instantly teleporting upright.
+- Balance and body state are visible in the selected-Orbsight debug panel.
+- The shell remains deliberately lightweight so the small plantigrade legs can support it.
