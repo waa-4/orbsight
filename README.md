@@ -128,3 +128,43 @@ This reflex:
 - recovery mode boosts local support forces but leaves the normal motor brain's chosen targets intact
 
 The only remaining external safety action is the existing lab upright reset after a long failed recovery.
+
+
+## v0.3.5 anatomy + persistence
+
+### Anatomical safety
+The previous body could still be physically whipped into impossible poses even when motor targets were clamped.
+
+This update adds:
+- narrower anatomical joint ranges
+- one-direction-biased knees that cannot invert backwards
+- soft hard-zone force reduction near every joint limit
+- passive tendon-like bias toward a safe range
+- lower motor speed near joint edges
+- jam detection
+- muscle-relaxation reflex for physically trapped limbs
+- per-leg limb health readout: normal / strained / relaxing
+
+The relaxation reflex does **not** choose a step or destination. It simply reduces force temporarily so physics can free a trapped leg.
+
+### Persistent world save
+The GitHub Pages build now uses the browser's localStorage.
+
+Autosave includes:
+- all current Orbsights, up to 20
+- approximate positions
+- personality
+- needs
+- interests
+- short-term and long-term memories
+- learned gait genome
+- best gait genome / score
+- motor generation and confidence
+- individual joint strength
+- world objects and their positions
+
+The world autosaves every ~4 seconds and before page unload.
+
+Reloading the page automatically loads the saved world.
+
+For safety, loaded Orbsights are restored in an anatomy-safe upright pose at approximately their saved location instead of restoring a potentially mangled rigid-body limb pose from the exact previous physics frame.
