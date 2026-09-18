@@ -732,3 +732,18 @@ The UI now separates:
 
 A moving Orbsight should accumulate soft assists without visible snapping.
 Catastrophic resets should normally stay at zero.
+
+
+# v0.8 — Grip + Strength + Time
+
+- Simulation speed selector: 0.5×, 1×, 2×, 5×, 10×, 15×.
+- Uses a fixed 1/120 second simulation step at every speed; faster modes run more physics steps rather than a giant unstable timestep.
+- Shell mass reduced to 0.46 while leg/foot mass is slightly increased, lowering effective center of mass.
+- Loaded legs get somewhat more support authority while airborne legs stay loose.
+- Feet can temporarily grip platforms, walls, pushable blocks, and logs with real point-to-point physics constraints.
+- A grip does not pull the body upward by itself; the Orbsight's hip/knee/ankle muscles must pull against it.
+- Grip strength scales with the foot muscle and releases with fatigue or after a short hold.
+- Newborn adaptive muscle strength is increased to about 66%.
+- Useful repeated movement strengthens joints faster.
+- Muscle cap increased to 160%; fatigue is slightly less punishing and recovers faster.
+- Time scale is saved with the local world.
