@@ -109,12 +109,20 @@ export function createOrbsightBody(P,scene,id,x=0,z=0){
       index:i,side,front,hipMount,upper,lower,ankleMount,foot,
       joints:{spread,hip:hipJ,knee:kneeJ,ankle:ankleJ,roll},
       angles:{spread:0,hip:0,knee:0,ankle:0,roll:0},
-      contact:false,load:0,
+      contact:false,load:0,grip:null,gripCandidate:null,
       commands:{...NEUTRAL}
     });
   });
 
-  return{id,shell,shellMesh,eyeRoot,parts,joints,legs,contacts:0,upright:1,age:0,settling:true,engine:"Rapier revolute limits"};
+  return{
+    id,shell,shellMesh,eyeRoot,parts,joints,legs,contacts:0,upright:1,age:0,settling:true,
+    engine:"Rapier hard limits + mind-body velocity muscles",
+    bridge:{
+      gains:Array.from({length:4},()=>({spread:1,hip:1,knee:1,ankle:1,roll:1})),
+      measured:Array.from({length:4},()=>({spread:0,hip:0,knee:0,ankle:0,roll:0})),
+      health:"connecting"
+    }
+  };
 }
 
 export function updateBodySensors(o,objects){
@@ -140,6 +148,16 @@ export function updateBodySensors(o,objects){
     }
     leg.contact=(fp.y-support)<0.16;
     leg.load=leg.contact?clamp(1-Math.abs(fv.y)/1.8):0;
+
+    // Touch/reach sensor for the mind: nearest climbable surface near this foot.
+    leg.gripCandidate=null;
+    let gd=0.58;
+    for(const it of objects){
+      if(!it.active || !["platform","wall","pushblock","log","plank"].includes(it.type))continue;
+      const bp=it.body.translation();
+      const d=Math.hypot(fp.x-bp.x,fp.y-bp.y,fp.z-bp.z)-(it.r||0.4);
+      if(d<gd){gd=d;leg.gripCandidate={object:it,distance:d}}
+    }
     if(leg.contact)contacts++;
   }
   o.contacts=contacts
@@ -183,6 +201,64 @@ function applyJointActuator(info,current,target,activation,dt){
   info.bodyA.applyTorqueImpulse({x:-t.x,y:-t.y,z:-t.z},true);
 }
 
+
+function addVec(a,b){return{x:a.x+b.x,y:a.y+b.y,z:a.z+b.z}}
+function subVec(a,b){return{x:a.x-b.x,y:a.y-b.y,z:a.z-b.z}}
+function scaleVec(v,k){return{x:v.x*k,y:v.y*k,z:v.z*k}}
+
+function velocityActuator(info,current,target,activation,gain=1){
+  // Direct angular-velocity muscle layer. This changes velocity, never position,
+  // so Rapier's joints/limits remain authoritative.
+  const err=target-current;
+  const desired=clamp(err*8.0,-4.0,4.0)*activation*gain;
+  const axis=worldAxis(info.bodyA,info.axisLocal);
+  const avA=info.bodyA.angvel(),avB=info.bodyB.angvel();
+  const rel=(avB.x-avA.x)*axis.x+(avB.y-avA.y)*axis.y+(avB.z-avA.z)*axis.z;
+  const delta=clamp(desired-rel,-0.34,0.34);
+  const push=scaleVec(axis,delta*0.5);
+  info.bodyA.setAngvel(subVec(avA,push),true);
+  info.bodyB.setAngvel(addVec(avB,push),true);
+}
+
+function localPoint(body,worldPoint){
+  const p=body.translation(),q=body.rotation();
+  const v=new THREE.Vector3(worldPoint.x-p.x,worldPoint.y-p.y,worldPoint.z-p.z);
+  v.applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w).invert());
+  return{x:v.x,y:v.y,z:v.z}
+}
+
+export function createGrip(P,o,leg,target){
+  if(leg.grip || !target || !target.active)return false;
+  const fp=leg.foot.translation(),tp=target.body.translation();
+  const dx=fp.x-tp.x,dy=fp.y-tp.y,dz=fp.z-tp.z;
+  const dist=Math.hypot(dx,dy,dz);
+  const reach=(target.r||0.6)+0.42;
+  if(dist>reach)return false;
+  const a1={x:0,y:0,z:0};
+  const a2=localPoint(target.body,fp);
+  const data=RAPIER.JointData.spherical(a1,a2);
+  const joint=P.world.createImpulseJoint(data,leg.foot,target.body,true);
+  joint.setContactsEnabled(false);
+  leg.grip={joint,target,age:0,anchor:{x:fp.x,y:fp.y,z:fp.z}};
+  return true
+}
+
+export function releaseGrip(P,leg){
+  if(!leg.grip)return;
+  try{P.world.removeImpulseJoint(leg.grip.joint,true)}catch{}
+  leg.grip=null
+}
+
+export function updateGrips(P,o,dt){
+  for(const leg of o.legs){
+    if(!leg.grip)continue;
+    leg.grip.age+=dt;
+    const fp=leg.foot.translation(),a=leg.grip.anchor;
+    const stretch=Math.hypot(fp.x-a.x,fp.y-a.y,fp.z-a.z);
+    if(stretch>0.48 || leg.grip.age>5.5 || !leg.grip.target.active)releaseGrip(P,leg);
+  }
+}
+
 export function driveBody(P,o,commands,dt){
   applySupportReflex(o,commands);
   let activity=0;
@@ -198,6 +274,8 @@ export function driveBody(P,o,commands,dt){
       const targetVel=clamp(err*7.5,-3.2,3.2);
       info.joint.configureMotor(target,targetVel,stiffness,damping);
       applyJointActuator(info,current,target,activation,dt);
+      const bridgeGain=(o.bridge?.gains?.[i]?.[name] ?? 1);
+      velocityActuator(info,current,target,activation,bridgeGain);
       info.target=target;
       activity+=Math.abs(err);
     }
@@ -232,12 +310,15 @@ export function animateEye(o,time){
   const pupil=o.eyeRoot.children[1];
   if(!pupil)return;
   const phase=time*0.85+o.id*1.7;
-  pupil.position.x=Math.sin(phase)*0.085;
-  pupil.position.y=Math.sin(phase*0.63+1.1)*0.050;
+  pupil.position.x=Math.sin(phase)*0.12;
+  pupil.position.y=Math.sin(phase*0.63+1.1)*0.075;
   pupil.position.z=0.275;
+  o.eyeRoot.rotation.y=Math.sin(phase*0.42)*0.10;
+  o.eyeRoot.rotation.x=Math.sin(phase*0.31+0.7)*0.06;
 }
 
 export function destroyBody(P,scene,o){
+  for(const leg of o.legs)releaseGrip(P,leg);
   for(const j of o.joints){try{P.world.removeImpulseJoint(j.joint,true)}catch{}}
   for(const {body,mesh} of o.parts){scene.remove(mesh);try{P.world.removeRigidBody(body)}catch{}}
   scene.remove(o.eyeRoot)

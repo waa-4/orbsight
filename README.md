@@ -1,6 +1,6 @@
-# Orbsight v0.13 — Rapier Joint Rebuild
+# Orbsight v0.14 — Mind–Body Bridge
 
-Stable filenames from now on:
+Stable filenames remain:
 - index.html
 - main.js
 - physics.js
@@ -8,104 +8,65 @@ Stable filenames from now on:
 - world.js
 - README.md
 
-## Why this rebuild exists
-The Cannon-based versions repeatedly curled their legs despite:
-- velocity limit guards
-- collision spacing
-- redesigned geometry
-- explicit anti-curl brain rules
+## Why this version exists
+The Rapier skeleton could exist without visibly acting alive. v0.14 makes the connection between
+mind and rigid body explicit instead of assuming that issuing a motor target is enough.
 
-The root problem was that Cannon's HingeConstraint did not give this project the hard lower/upper
-angular stops it needed. The project accumulated scripts trying to imitate anatomy.
+## Explicit sensor → mind → actuator bridge
+Every step:
+1. physics.js measures each leg's spread/hip/knee/ankle/roll angles
+2. touch/contact and nearby grip surfaces are sensed
+3. mind.js creates individual joint commands
+4. physics.js sends those commands through three physical actuator layers:
+   - Rapier joint PD motor
+   - equal/opposite torque impulse
+   - equal/opposite angular-velocity muscle assist
+5. Rapier hard limits still prevent impossible joint rotation
 
-## New physics foundation
-v0.13 moves creature physics to Rapier 3D.
+No joint positions are teleported.
 
-Each leg uses actual revolute joints with Rapier-enforced limits:
-- spread
-- hip
-- knee
-- ankle
-- foot roll
+## Self-calibrating muscles
+From 2–8 simulated seconds, the brain tests one leg/joint at a time.
+If a commanded joint barely changes angle, that joint's muscle gain is increased automatically.
+If it responds, the gain settles back toward normal.
 
-The brain still chooses motor targets, but Rapier is the final authority on whether a joint may
-rotate any farther.
+Telemetry reports:
+- `Bridge: connecting / calibrating / boosting weak muscles / connected`
+- average muscle gain
+- motor activity
+- runtime status
 
-## Geometric leg construction
-Leg segments are created from actual hip → knee → ankle geometry. All segments begin with the same
-outward splay rotation so their local revolute axes align correctly.
+## Physical gripping
+Feet now sense nearby:
+- platforms
+- walls
+- pushable blocks
+- logs
+- planks
 
-The body plan is:
-shell → spread joint → hip mount → hip joint → upper leg → knee → lower leg → ankle → foot roll → foot
+When the mind chooses to grip, Rapier creates a spherical point joint from that foot to the
+surface/body. The foot may rotate around the grip point, so it behaves more like grasping than
+being welded in place.
 
-## 3-second newborn settling period
-For the first three simulated seconds:
-- learning is paused
-- babbling is paused
-- neutral joint targets are used
-- gravity and the real joint limits are allowed to settle the skeleton
+Grips release when:
+- the leg returns to normal ground support
+- the grip is stretched too far
+- the mind moves on
+- the Orbsight sleeps
+- the grip exceeds its lifetime
 
-After settling, normal developmental learning begins.
+A gripping leg deliberately pulls through its own hip/knee motors.
 
-## Mind simplification
-v0.13 removes the giant anti-curl brain subsystem. The skeleton should physically prevent impossible
-curling, so the mind can focus again on:
-- body discovery
-- support
-- crawling
-- weight transfer
-- stepping
-- walking
-- free locomotion
+## Movement
+After calibration, each leg continues individual self-generated experimentation on top of the
+learned motor policy. This is not a predefined walking cycle: leg phases differ, sensory contact
+affects the policy, and each joint still has its own learned weights/body-model feedback.
 
-## Preserved
-- 0.5x–15x simulation speed
-- freecam
-- remove selected
-- mattresses/sleep
-- thought bubbles
-- preset communication
-- motor babbling
-- local evolutionary policy mutation
-- expanded terrain and physics objects
+## Runtime resilience
+Eye movement happens before the physics step.
+Each Orbsight's mind/body step is guarded separately, so one subsystem error no longer freezes the
+whole visible scene. Any error is reported in the Events panel.
 
-## Note
-The browser imports `@dimforge/rapier3d-compat` 0.20.0 from jsDelivr. The compat build embeds its
-WASM, which is convenient for GitHub Pages.
-
-
-# v0.13.1 — Stance + Movement Fix
-
-The first Rapier build had two practical problems:
-1. The feet spawned roughly 0.2 blocks above the ground, so every Orbsight visibly dropped at birth.
-2. Joint motors were too soft to reliably hold the shell's weight, so after the drop the legs often
-   stayed collapsed and the learning policy had very little useful movement to work with.
-
-Changes:
-- shell/body spawns lower so feet begin essentially on the floor
-- neutral knee target is straighter and more load-bearing
-- Rapier motor stiffness/damping increased substantially
-- foot friction increased
-- 2-second settling period instead of 3 seconds
-- added a body-height/fall support reflex that extends the legs when the shell is collapsing
-- support reflex does NOT choose direction; it only resists falling
-- stronger body-discovery babbling and wider legal exploration ranges
-- early crawling/translation gets more immediate reward
-
-Stable filenames are unchanged:
-index.html / main.js / physics.js / mind.js / world.js
-
-
-# v0.13.2 — Motor Calibration / Proof of Life
-
-This build adds a diagnostic developmental phase because v0.13.1 could look completely inert.
-
-- 0–2s: neutral settling
-- 2–8s: each leg gets obvious safe joint sweeps, one leg at a time
-- after 8s: normal learned motor experimentation
-
-Rapier hard limits remain final authority. Motors now use target position + target velocity and a small equal/opposite physical torque impulse as muscle assist. No teleporting is used.
-
-The pupil also scans independently every rendered frame, restoring the visible eye movement lost during the Rapier rewrite.
-
-Stable filenames remain index.html / main.js / physics.js / mind.js / world.js.
+## Proof of life
+The pupil scan is deliberately more obvious in v0.14. If the eye moves but a leg doesn't, the
+render loop is alive and the bridge telemetry tells us which actuator needs help.

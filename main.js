@@ -4,7 +4,7 @@ import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,settleBody,
 import {setupWorld,addObject,resetMap,updateWorld} from "./world.js";
 import {attachMind,updateMind,cleanupMind} from "./mind.js";
 
-const BUILD="0.13.2-motor-calibration-2026-09-18";
+const BUILD="0.14-mind-body-bridge-2026-09-18";
 const $=id=>document.getElementById(id);
 $("status").textContent="loading Rapier physics…";
 
@@ -33,7 +33,9 @@ function refreshUI(){
   const o=app.selected;if(!o)return;const m=o.mind;
   $("nameT").textContent=m.name;$("thoughtT").textContent=m.thought;$("stageT").textContent=m.stageName;$("energyT").textContent=Math.round(m.energy*100)+"%";$("uprightT").textContent=Math.round((o.upright*0.5+0.5)*100)+"%";$("contactsT").textContent=o.contacts+"/4";$("genT").textContent=m.generation;$("rewardT").textContent=m.dense.toFixed(3);$("fragmentsT").textContent=m.fragments.length;$("settleT").textContent=o.age<2?Math.max(0,2-o.age).toFixed(1)+"s":(o.age<8?m.calibration.phase:"done");$("sleepT").textContent=m.sleep.sleeping?"sleeping":"awake";
   $("jointT").innerHTML=o.legs.map(l=>`L${l.index+1}: spread ${l.angles.spread.toFixed(2)} • hip ${l.angles.hip.toFixed(2)} • knee ${l.angles.knee.toFixed(2)} • ankle ${l.angles.ankle.toFixed(2)}`).join("<br>");
-  $("events").textContent=`Best score: ${m.bestScore<=-900?"learning":m.bestScore.toFixed(2)} • motor activity: ${m.activity.toFixed(3)} • phase: ${m.calibration.phase} • engine: ${o.engine}`;
+  const gripCount=o.legs.filter(l=>l.grip).length;
+  const avgGain=o.bridge.gains.flatMap(g=>["spread","hip","knee","ankle","roll"].map(j=>g[j])).reduce((a,b)=>a+b,0)/20;
+  $("events").textContent=`Bridge: ${o.bridge.health} • avg muscle gain ${avgGain.toFixed(2)} • grips ${gripCount}/4 • motor ${m.activity.toFixed(3)} • ${o.runtimeError?"ERROR: "+o.runtimeError.slice(0,100):"runtime OK"}`;
   $("objCount").textContent=`${app.objects.length} objects`;$("buildT").textContent=`${BUILD} • ${app.timeScale}×`;
 }
 $("pause").onclick=e=>{app.paused=!app.paused;e.currentTarget.textContent=app.paused?"Resume":"Pause"};
@@ -46,26 +48,33 @@ window.addEventListener("keydown",e=>{if(["KeyW","KeyA","KeyS","KeyD","KeyQ","Ke
 window.addEventListener("keyup",e=>app.freeKeys.delete(e.code));
 function updateFreecam(dt){if(app.follow)return;const speed=7*dt,f=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),r=new THREE.Vector3(),m=new THREE.Vector3();camera.getWorldDirection(f);f.y=0;if(f.lengthSq())f.normalize();r.crossVectors(f,up).normalize();if(app.freeKeys.has("KeyW"))m.add(f);if(app.freeKeys.has("KeyS"))m.sub(f);if(app.freeKeys.has("KeyD"))m.add(r);if(app.freeKeys.has("KeyA"))m.sub(r);if(app.freeKeys.has("KeyE"))m.y+=1;if(app.freeKeys.has("KeyQ"))m.y-=1;if(m.lengthSq()){m.normalize().multiplyScalar(speed);camera.position.add(m);controls.target.add(m)}}
 
-reset();$("status").textContent="v0.13.2 Rapier joint engine running";
+reset();$("status").textContent="v0.14 Mind-body bridge running";
 const clock=new THREE.Clock(),FIXED=1/180;let acc=0,uiTimer=0;
 function frame(){
   requestAnimationFrame(frame);const realDt=Math.min(0.05,clock.getDelta());resize();
+  for(const o of app.orbs){try{animateEye(o,performance.now()/1000)}catch(e){console.warn("eye",e)}}
   if(!app.paused){
     acc+=realDt*app.timeScale;let steps=0;
     while(acc>=FIXED&&steps<150){
       app.simTime+=FIXED;
       for(const o of app.orbs){
-        o.age+=FIXED;o.settling=o.age<2;
-        updateBodySensors(o,app.objects);
-        const cmd=updateMind(app,o,FIXED);
-        o.mind.activity=driveBody(P,o,cmd,FIXED);
+        try{
+          o.age+=FIXED;o.settling=o.age<2;
+          updateBodySensors(o,app.objects);
+          const cmd=updateMind(app,o,FIXED);
+          o.mind.activity=driveBody(P,o,cmd,FIXED);
+          o.runtimeError="";
+        }catch(e){
+          o.runtimeError=String(e?.stack||e);
+          console.error("Orbsight step error",e);
+        }
       }
-      P.world.step();
+      try{P.world.step()}catch(e){console.error("Rapier world step",e);$("err").hidden=false;$("err").textContent="Rapier step error:\n"+String(e?.stack||e)}
       updateWorld(app);
       acc-=FIXED;steps++;
     }
     if(steps>=150)acc=0;
-    for(const o of app.orbs){syncBody(o);animateEye(o,app.simTime)}
+    for(const o of app.orbs){try{syncBody(o)}catch(e){console.error("syncBody",e)}}
   }
   uiTimer-=realDt;if(uiTimer<=0){refreshUI();refreshList();uiTimer=0.3}
   updateFreecam(realDt);
