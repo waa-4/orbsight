@@ -420,3 +420,39 @@ If it increases, the displayed reason tells which invariant was violated, such a
 
 That gives us a direct way to diagnose any remaining locomotion problem instead of guessing
 from the rendered model.
+
+
+# v0.5.1 — Gait + Grip Patch
+
+This patch targets the v0.5 failure where Orbsight stayed anatomically valid but could mostly
+rapidly tap-dance backward with very stiff legs.
+
+## Softer gait
+- gait frequency is reduced
+- hip/knee/ankle amplitudes are slightly smaller
+- swing phase is shorter
+- stance phase is longer
+- brain-selected joint targets are low-pass smoothed before reaching the motors
+- motor speed limits are reduced
+- relative joint angular velocity is fed back as damping
+- stall torque reserve activates later and is less extreme
+
+This makes the joints behave more like compliant muscles rather than servos snapping between poses.
+
+## More foot grip
+Foot-ground friction is increased substantially.
+
+A new passive plantar-traction reflex also resists horizontal sliding whenever:
+- the foot is near the floor
+- that leg is in its planted/stance part of the gait
+
+It only damps slip. It does not push in the desired travel direction, so locomotion still has to
+come from the learned joint motion and physical contact.
+
+## Less backward tap-dancing
+The old sinusoid spent too much time rapidly alternating lift/plant states.
+v0.5.1 uses a smooth thresholded swing phase, so each foot remains planted for more of the cycle
+and lifts for a shorter portion.
+
+## Anti-folding
+The complete v0.5 hard-stop skeleton and anti-merge validator remain enabled.
