@@ -72,3 +72,25 @@ curling, so the mind can focus again on:
 ## Note
 The browser imports `@dimforge/rapier3d-compat` 0.20.0 from jsDelivr. The compat build embeds its
 WASM, which is convenient for GitHub Pages.
+
+
+# v0.13.1 — Stance + Movement Fix
+
+The first Rapier build had two practical problems:
+1. The feet spawned roughly 0.2 blocks above the ground, so every Orbsight visibly dropped at birth.
+2. Joint motors were too soft to reliably hold the shell's weight, so after the drop the legs often
+   stayed collapsed and the learning policy had very little useful movement to work with.
+
+Changes:
+- shell/body spawns lower so feet begin essentially on the floor
+- neutral knee target is straighter and more load-bearing
+- Rapier motor stiffness/damping increased substantially
+- foot friction increased
+- 2-second settling period instead of 3 seconds
+- added a body-height/fall support reflex that extends the legs when the shell is collapsing
+- support reflex does NOT choose direction; it only resists falling
+- stronger body-discovery babbling and wider legal exploration ranges
+- early crawling/translation gets more immediate reward
+
+Stable filenames are unchanged:
+index.html / main.js / physics.js / mind.js / world.js

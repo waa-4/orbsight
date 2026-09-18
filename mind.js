@@ -15,7 +15,7 @@ const CHAT=[
 const REPLIES=["Okay.","I see.","Maybe.","Same here.","Interesting.","I will try.","Be careful.","Where?","Good luck.","I noticed that too."];
 
 function weights(scale=0.24){return Array.from({length:FEATURES},()=>rand(-scale,scale))}
-function seedPolicy(){return{freq:rand(0.35,0.75),gain:rand(0.28,0.48),phase:[0,Math.PI,Math.PI,0],legs:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,weights(j==="hip"?0.28:0.22)])))}}
+function seedPolicy(){return{freq:rand(0.42,0.90),gain:rand(0.42,0.68),phase:[0,Math.PI,Math.PI,0],legs:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,weights(j==="hip"?0.28:0.22)])))}}
 function clone(x){return JSON.parse(JSON.stringify(x))}
 function mutate(p,amt=0.07){
   const n=clone(p);const edits=1+Math.floor(Math.random()*3);
@@ -74,7 +74,9 @@ function sampleCount(m){let n=0;for(const l of m.model)for(const j of JOINTS)n+=
 function learnBody(o,dt){
   const m=o.mind,p=bodyPosition(o),dx=p.x-m.prevPos.x,dy=p.y-m.prevPos.y,dz=p.z-m.prevPos.z;
   const forward=dx*Math.sin(m.desiredHeading)+dz*Math.cos(m.desiredHeading),h=Math.hypot(dx,dz);
-  let r=Math.max(0,forward)*14+h*3.2+Math.max(0,dy)*2.8+(o.contacts>=2?0.004:0);
+  let r=Math.max(0,forward)*14+h*3.6+Math.max(0,dy)*2.8+(o.contacts>=2?0.004:0);
+  // Early development should value any controlled translation, including crawling.
+  if(m.stage<=2 && h>0.00015)r+=Math.min(0.018,h*9);
   m.dense=r;m.denseAccum+=r;
   for(let i=0;i<4;i++){const leg=o.legs[i];for(const j of JOINTS){const now=leg.angles[j]||0,prev=m.prevAngles[i][j],da=now-prev;if(Math.abs(da)>0.0015){const e=m.model[i][j],sg=Math.sign(da),k=0.025;e.forward=THREE.MathUtils.lerp(e.forward,clamp(forward*sg/dt,-1,1),k);e.lift=THREE.MathUtils.lerp(e.lift,clamp(dy*sg/dt,-1,1),k);e.support=THREE.MathUtils.lerp(e.support,(leg.contact?1:0)*sg,k);e.samples++}m.prevAngles[i][j]=now}}
   const ev=m.evidence;if(o.upright>0.58&&o.contacts>=2)ev.stable+=dt;if(h>0.0004&&o.contacts>=1)ev.crawl+=dt;if(o.contacts>=2&&h>0.00025)ev.transfer+=dt;if(h>0.0005)ev.step+=dt;if(h>0.0008&&o.upright>0.48)ev.walk+=dt;
@@ -91,10 +93,10 @@ function updatePolicy(o,dt){
     for(const j of JOINTS){
       const a=leg.angles[j]||0,e=m.model[i][j],f=[1,Math.sin(ph),Math.cos(ph),leg.contact?1:0,a,leg.load||0,e.forward,e.lift];
       let out=policyOut(m.policy.legs[i][j],f,m.policy.gain);
-      if(m.stage===0&&m.babble.leg===i&&m.babble.joint===j)out+=m.babble.value*0.36;
+      if(m.stage===0&&m.babble.leg===i&&m.babble.joint===j)out+=m.babble.value*0.52;
       out=clamp(out,-1,1);
-      const ranges={spread:0.22,hip:0.32,knee:0.42,ankle:0.24,roll:0.18};
-      const bases={spread:0,hip:-0.08,knee:leg.contact?0.28:0.38,ankle:0.08,roll:0};
+      const ranges={spread:0.26,hip:0.40,knee:0.48,ankle:0.28,roll:0.20};
+      const bases={spread:0,hip:-0.10,knee:leg.contact?0.16:0.30,ankle:0.06,roll:0};
       const target=bases[j]+out*ranges[j];
       m.command[i][j]={target,activation:0.12+0.88*Math.abs(out)};
       activity+=Math.abs(out)
@@ -114,13 +116,13 @@ export function updateMind(app,o,dt){
   social(app,o,dt);sleep(app,o,dt);
 
   if(o.settling){
-    m.thought="Letting my new joints settle.";
-    const neutral={spread:0,hip:-0.08,knee:0.26,ankle:0.08,roll:0};
+    m.thought="Standing up and letting my new joints settle.";
+    const neutral={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
     for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.28};
     return m.command
   }
   if(m.sleep.sleeping){
-    const neutral={spread:0,hip:-0.08,knee:0.34,ankle:0.08,roll:0};
+    const neutral={spread:0,hip:-0.10,knee:0.20,ankle:0.06,roll:0};
     for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.08};
     return m.command
   }

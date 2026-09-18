@@ -11,7 +11,7 @@ const JOINT_LIMITS={
   ankle:[-0.38,0.46],
   roll:[-0.30,0.30]
 };
-const NEUTRAL={spread:0,hip:-0.08,knee:0.26,ankle:0.08,roll:0};
+const NEUTRAL={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
 
 export async function createPhysics(){
   await RAPIER.init();
@@ -41,7 +41,7 @@ function makeRevolute(P,a,b,anchorA,anchorB,axis,min,max,name){
   const j=P.world.createImpulseJoint(data,a,b,true);
   j.setLimits(min,max);
   j.setContactsEnabled(false);
-  j.configureMotorPosition(0,18,3.6);
+  j.configureMotorPosition(0,42,8.0);
   return{name,joint:j,min,max,target:0,stiffness:18,damping:3.6}
 }
 function relAngle(bodyA,bodyB,axis){
@@ -57,10 +57,10 @@ function cylinderMesh(len,rad,mat){
 }
 
 export function createOrbsightBody(P,scene,id,x=0,z=0){
-  const shellY=1.42;
+  const shellY=1.22;
   const shell=addDynamic(P,
     bodyDesc(V(x,shellY,z),Q(),0.07,0.24),
-    RAPIER.ColliderDesc.ball(0.62).setDensity(0.45).setFriction(0.55)
+    RAPIER.ColliderDesc.ball(0.62).setDensity(0.42).setFriction(0.70)
   );
   const shellMesh=new THREE.Mesh(new THREE.SphereGeometry(0.62,28,20),new THREE.MeshStandardMaterial({color:new THREE.Color().setHSL((id*0.137)%1,0.22,0.78),roughness:0.82}));
   shellMesh.castShadow=true;scene.add(shellMesh);
@@ -88,7 +88,7 @@ export function createOrbsightBody(P,scene,id,x=0,z=0){
     const lower=addDynamic(P,bodyDesc(V((knee.x+ankle.x)/2,(knee.y+ankle.y)/2,knee.z),rot,0.06,0.17),RAPIER.ColliderDesc.cuboid(0.056,L2/2,0.056).setDensity(0.30).setFriction(0.55));
     const ankleMount=addDynamic(P,bodyDesc(ankle,rot,0.08,0.20),RAPIER.ColliderDesc.ball(0.06).setDensity(0.18).setFriction(0.65));
     const footPos=V(ankle.x+side*0.045,Math.max(0.085,ankle.y-0.045),ankle.z+front*0.13);
-    const foot=addDynamic(P,bodyDesc(footPos,rot,0.10,0.26),RAPIER.ColliderDesc.cuboid(0.12,0.055,0.22).setDensity(0.36).setFriction(2.2));
+    const foot=addDynamic(P,bodyDesc(footPos,rot,0.10,0.26),RAPIER.ColliderDesc.cuboid(0.12,0.055,0.22).setDensity(0.40).setFriction(2.8));
 
     const hm=new THREE.Mesh(new THREE.SphereGeometry(0.07,10,8),jointMat);
     const um=cylinderMesh(L1,0.06,limbMat),lm=cylinderMesh(L2,0.056,limbMat);
@@ -145,7 +145,29 @@ export function updateBodySensors(o,objects){
   o.contacts=contacts
 }
 
+
+function applySupportReflex(o,commands){
+  const p=o.shell.translation(),v=o.shell.linvel();
+  // Body-level spinal/vestibular reflex: only fights collapse, never selects heading.
+  const low=clamp((1.15-p.y)/0.28,0,1);
+  const falling=clamp((-v.y-0.08)/1.2,0,1);
+  const need=Math.max(low,falling);
+  if(need<=0)return;
+  for(let i=0;i<o.legs.length;i++){
+    const leg=o.legs[i],c=commands[i];
+    c.spread.target=THREE.MathUtils.lerp(c.spread.target,0,need*0.35);
+    c.hip.target=THREE.MathUtils.lerp(c.hip.target,-0.12,need*0.72);
+    c.knee.target=THREE.MathUtils.lerp(c.knee.target,0.06,need*0.90);
+    c.ankle.target=THREE.MathUtils.lerp(c.ankle.target,0.04,need*0.70);
+    c.roll.target=THREE.MathUtils.lerp(c.roll.target,0,need*0.55);
+    for(const name of ["spread","hip","knee","ankle","roll"]){
+      c[name].activation=Math.max(c[name].activation,0.58+need*0.34);
+    }
+  }
+}
+
 export function driveBody(P,o,commands,dt){
+  applySupportReflex(o,commands);
   let activity=0;
   for(let i=0;i<o.legs.length;i++){
     const leg=o.legs[i],cmd=commands[i];
@@ -153,7 +175,7 @@ export function driveBody(P,o,commands,dt){
       const info=leg.joints[name],lim=JOINT_LIMITS[name],target=clamp(cmd[name].target,lim[0],lim[1]);
       const activation=clamp(cmd[name].activation,0.02,1);
       // Rapier's actual limit is the final authority. The brain can request a target, but cannot exceed it.
-      const stiffness=10+activation*20,damping=2.8+activation*3.0;
+      const stiffness=34+activation*52,damping=7.0+activation*7.0;
       info.joint.configureMotorPosition(target,stiffness,damping);
       info.target=target;
       activity+=Math.abs(target-(leg.angles[name]||0));
@@ -165,15 +187,15 @@ export function driveBody(P,o,commands,dt){
 export function settleBody(P,o){
   for(const leg of o.legs){
     const neutral={
-      spread:{target:0,activation:0.28},
-      hip:{target:-0.08,activation:0.32},
-      knee:{target:0.26,activation:0.34},
-      ankle:{target:0.08,activation:0.28},
-      roll:{target:0,activation:0.22}
+      spread:{target:0,activation:0.62},
+      hip:{target:-0.10,activation:0.72},
+      knee:{target:0.14,activation:0.78},
+      ankle:{target:0.06,activation:0.66},
+      roll:{target:0,activation:0.48}
     };
     for(const name of Object.keys(neutral)){
       const n=neutral[name];
-      leg.joints[name].joint.configureMotorPosition(n.target,14+n.activation*18,4.6);
+      leg.joints[name].joint.configureMotorPosition(n.target,48+n.activation*54,9.0+n.activation*5.0);
     }
   }
 }
