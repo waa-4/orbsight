@@ -515,3 +515,82 @@ The v0.5 hard anatomical validator remains the final authority:
 - joints cannot exceed anatomical stops
 - legs cannot remain inside the shell
 - separate legs cannot remain geometrically merged
+
+
+# Orbsight v0.6 — Motor Learning Rebuild
+
+This update changes the motor architecture because v0.5.2 still looked almost identical to
+earlier versions.
+
+## Why the behavior stayed the same
+
+Previous builds softened the joints, changed friction, and changed strength, but the high-level
+controller still generated the same basic sinusoidal leg cycle:
+
+- oscillator phase
+- predefined swing/stance waveform
+- predefined hip/knee/ankle targets
+
+Learning only mutated the parameters of that fixed gait. Therefore every Orbsight remained a
+variation of the same tap-dancing controller.
+
+## v0.6 removes the canned gait
+
+Each leg now has a small learned policy for five muscle groups:
+
+- hip spread
+- hip swing
+- knee
+- ankle
+- foot roll
+
+The policy receives:
+- internal oscillator sine/cosine (CPG-like rhythm)
+- whether the foot is touching the ground
+- current joint angle
+- joint angular velocity
+- body tilt from the vestibular system
+- heading error
+
+The oscillator is only an input. It does not decide which leg lifts or plants.
+
+Each muscle output is produced by learned weights and converted into a soft activation target.
+Those weights are mutated and selected according to real physical outcomes.
+
+This is closer to a simplified animal architecture:
+**central rhythm + proprioception + vestibular feedback + contact reflex + muscles.**
+
+## Motor learning
+
+Every Orbsight has its own motor-policy weights.
+
+Trials reward different things depending on developmental stage:
+- joint discovery: useful motion and controllability
+- balance: uprightness and load symmetry
+- standing: stable contact
+- stepping: physical displacement while staying upright
+- walking/free locomotion: forward progress, stability, efficiency
+
+Backward movement is allowed, but a controller that only travels backward is no longer treated
+as equally useful for target-directed locomotion.
+
+## Save migration
+
+Personality, memory, interests, joint strength, fatigue, and developmental state are retained.
+
+Old pre-v0.6 gait genomes are deliberately discarded when loaded because keeping them would
+reintroduce the exact old tap-dance controller. Existing Orbsights therefore keep who they are
+and how strong they have become, but receive a fresh v0.6 motor-learning policy.
+
+## Muscle growth
+
+The use-driven muscle-strength system from v0.5.2 remains active.
+Muscles strengthen only when commanded AND physically moving.
+
+## Anatomy
+
+The v0.5 hard skeleton validator remains active:
+- no inverted knees
+- no persistent shell penetration
+- no persistent leg merging
+- no persistent impossible joint angle

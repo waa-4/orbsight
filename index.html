@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b0d12">
-<title>Orbsight v0.5.2 — Soft Muscles</title>
+<title>Orbsight v0.6 — Motor Learning Rebuild</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d12;--p:#141821;--p2:#0f131b;--t:#f5f7fb;--m:#9aa3b2;--l:#252c39;--a:#7b8cff;--good:#62cf79;--bad:#e15c5c;--warn:#e4b95c}
 *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--t);font-family:Inter,system-ui,Arial,sans-serif}body{overflow-x:hidden}
@@ -16,13 +16,13 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/","cannon-es":"https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/+esm"}}</script>
 </head>
 <body><main>
-<header class="top"><div><h1>Orbsight <span>v0.5.2</span></h1><p>Floppier animal-like limbs, learnable muscle control, strength growth from use, planted feet, and the v0.5 anti-fold skeleton.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button><button id="reset">Reset world</button><button id="follow">Follow selected: ON</button><button id="reloadBuild">Reload build</button></div></header>
+<header class="top"><div><h1>Orbsight <span>v0.6</span></h1><p>Learned muscle activation from proprioception and vestibular feedback, floppy limbs, strength growth, and the v0.5 hard skeleton.</p></div><div class="buttons"><button id="pause">Pause</button><button id="saveNow">Save now</button><button id="loadNow">Load save</button><button id="reset">Reset world</button><button id="follow">Follow selected: ON</button><button id="reloadBuild">Reload build</button></div></header>
 <div id="err" class="err" hidden><b>Orbsight could not start.</b><div id="errText"></div></div>
 <section class="layout">
 <div class="view"><canvas id="world"></canvas><div id="status" class="chip">loading rigid-body physics…</div><div class="hint">Drag to orbit • wheel/pinch to zoom • click an Orbsight shell to select it</div></div>
 <aside class="panel">
 <h2>Orbsight lab</h2>
-<div class="sec"><div class="proof"><div><strong>Brain:</strong> <span id="brainBuild">—</span></div><div><strong>Physics:</strong> <span id="physicsBuild">—</span></div><div><strong>Runtime:</strong> <span id="runtimeBuild">—</span></div></div><div class="small" style="margin-top:6px">If these values say 0.5.2 / soft-muscle-growth, this build is definitely running. This ZIP contains no old JavaScript file that can override it.</div></div>
+<div class="sec"><div class="proof"><div><strong>Brain:</strong> <span id="brainBuild">—</span></div><div><strong>Physics:</strong> <span id="physicsBuild">—</span></div><div><strong>Runtime:</strong> <span id="runtimeBuild">—</span></div></div><div class="small" style="margin-top:6px">If these values say 0.6 / motor-learning, this build is definitely running. This ZIP contains no old JavaScript file that can override it.</div></div>
 <div class="sec">
 <h3>Persistence</h3>
 <div class="kv"><span>Autosave</span><b>ON</b><span>Save status</span><b id="saveStatus">not saved yet</b><span>Save slot</span><b>local browser</b></div>
@@ -30,7 +30,7 @@ h1{margin:0;font-size:clamp(30px,5vw,48px)}h1 span{font-size:.42em;color:var(--m
 </div>
 <div class="sec"><h3>Population <span id="popCount" class="small"></span></h3><div class="grid2"><button id="addOrb">+ Add Orbsight</button><button id="removeOrb">Remove selected</button></div><div class="orblist" id="orbList"></div><div class="small">Maximum 20. Each creature now has 21 physical bodies and 20 articulated joints, so very large populations may run slower.</div></div>
 <div class="sec"><h3>Add world object</h3><div class="grid3"><div><label>Type</label><select id="objectType"><option value="food">Food</option><option value="danger">Danger</option><option value="wall">Block</option><option value="toy">Toy</option><option value="marker">Marker</option></select></div><div><label>X</label><input id="objX" type="number" min="-20" max="20" step=".5" value="0"></div><div><label>Z</label><input id="objZ" type="number" min="-20" max="20" step=".5" value="0"></div></div><div class="grid2" style="margin-top:7px"><button id="addObject">Add object</button><button id="randomObject">Add randomly</button></div><div class="small" id="objCount"></div></div>
-<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b><span>Leg separation</span><b id="separationT">—</b><span>Skeleton corrections</span><b id="skeletonFixT">—</b><span>Average foot grip</span><b id="gripT">—</b><span>Avg muscle strength</span><b id="muscleT">—</b><span>Muscle fatigue</span><b id="fatigueT">—</b></div></div>
+<div class="sec"><h3>Selected Orbsight</h3><div class="kv"><span>Name</span><b id="nameT">—</b><span>Thought</span><b id="thoughtT">—</b><span>Motor generation</span><b id="genT">—</b><span>Motor stage</span><b id="stageT">—</b><span>Gait score</span><b id="scoreT">—</b><span>Upright</span><b id="uprightT">—</b><span>Body mass</span><b id="massT">—</b><span>Motor output</span><b id="motorOutT">—</b><span>Motor state</span><b id="motorStateT">—</b><span>Feet grounded</span><b id="feetT">—</b><span>Body state</span><b id="bodyStateT">—</b><span>Body clearance</span><b id="clearanceT">—</b><span>Support reflex</span><b id="supportT">—</b><span>Leg separation</span><b id="separationT">—</b><span>Skeleton corrections</span><b id="skeletonFixT">—</b><span>Average foot grip</span><b id="gripT">—</b><span>Avg muscle strength</span><b id="muscleT">—</b><span>Muscle fatigue</span><b id="fatigueT">—</b><span>Controller</span><b id="controllerT">learned policy</b></div></div>
 <div class="sec"><h3>Vestibular system</h3>
 <div class="kv"><span>Tilt</span><b id="vestTilt">—</b><span>Angular speed</span><b id="vestSpin">—</b><span>Acceleration</span><b id="vestAccel">—</b><span>Falling</span><b id="vestFall">—</b></div>
 <div class="small">Inner-ear-like sensors report orientation and motion to the brain. They do not decide actions.</div>
@@ -54,9 +54,9 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import * as CANNON from 'cannon-es';
 
-const BUILD='0.5.2-soft-muscle-growth-2026-09-17';
-const BRAIN='0.5.2 sensorimotor-brain';
-const PHYSICS='cannon-es soft muscles + strength adaptation + hard-stop skeleton';
+const BUILD='0.6-motor-learning-2026-09-17';
+const BRAIN='0.6 learned-motor-policy';
+const PHYSICS='cannon-es floppy muscles + learned CPG/reflex policy + hard-stop skeleton';
 const SAVE_KEY='orbsight-v0.3.5-save';
 const SAVE_VERSION=4;
 let saveTimer=0;
@@ -99,52 +99,75 @@ function updateObjectCount(){$('objCount').textContent=`${things.filter(t=>t.act
 function removeThing(it){scene.remove(it.mesh);world.removeBody(it.body)}
 
 function randomPersonality(){return{curiosity:rand(.25,.95),bravery:rand(.2,.9),stubbornness:rand(.15,.9),sociability:rand(.1,.95),patience:rand(.15,.9),playfulness:rand(.1,.95)}}
-function seedGenome(){return{
-  freq:rand(.58,.92),
-  abductBase:rand(.18,.34),abductAmp:rand(.03,.13),
-  hipAmp:rand(.14,.28),kneeLift:rand(.16,.38),anklePush:rand(.07,.22),
-  hipCenter:rand(-.06,.06),kneeBase:rand(.00,.14),ankleBase:rand(-.05,.10),
-  turnGain:rand(.07,.18),
-  phases:[rand(-.18,.18),Math.PI+rand(-.18,.18),Math.PI+rand(-.18,.18),rand(-.18,.18)],
-  kpAbduct:rand(4.5,7.2),kpHip:rand(5.0,7.8),kpKnee:rand(5.2,8.2),kpAnkle:rand(4.2,6.8)
-}}
-function cloneGenome(g){return JSON.parse(JSON.stringify(g))}
-function mutateGenome(g,amt=.08){
-  const n=cloneGenome(g),m=(v,a,b,s)=>THREE.MathUtils.clamp(v+rand(-s,s),a,b);
-  n.freq=m(n.freq,.55,2.0,amt*1.5);
-  n.abductBase=m(n.abductBase,.08,.58,amt*.8);n.abductAmp=m(n.abductAmp,.01,.28,amt*.65);
-  n.hipAmp=m(n.hipAmp,.08,.62,amt);n.kneeLift=m(n.kneeLift,.08,.90,amt);
-  n.anklePush=m(n.anklePush,.02,.58,amt);
-  n.hipCenter=m(n.hipCenter,-.22,.22,amt*.55);n.kneeBase=m(n.kneeBase,-.10,.36,amt*.55);
-  n.ankleBase=m(n.ankleBase,-.32,.32,amt*.55);n.turnGain=m(n.turnGain,.02,.38,amt*.5);
-  n.kpAbduct=m(n.kpAbduct,2.5,12,amt*5);n.kpHip=m(n.kpHip,3,13,amt*5);
-  n.kpKnee=m(n.kpKnee,3,13,amt*5);n.kpAnkle=m(n.kpAnkle,2.5,11,amt*4);
-  n.phases=n.phases.map(p=>p+rand(-amt*2.5,amt*2.5));
-  return n
-}
 
+const MOTOR_JOINTS=['abduct','hip','knee','ankle','foot'];
+const MOTOR_FEATURES=8;
+// Features: bias, oscillator sin, oscillator cos, foot contact, joint angle,
+// joint velocity, body tilt signal, heading error.
+
+function randWeights(scale=.32){
+  return Array.from({length:MOTOR_FEATURES},()=>rand(-scale,scale));
+}
+function seedGenome(){
+  return{
+    controller:'policy-v1',
+    freq:rand(.55,.95),
+    phaseOffsets:[0,Math.PI,Math.PI,0],
+    phaseCoupling:rand(.4,.8),
+    outputGain:rand(.42,.72),
+    policies:Array.from({length:4},()=>({
+      abduct:randWeights(.20),
+      hip:randWeights(.30),
+      knee:randWeights(.26),
+      ankle:randWeights(.24),
+      foot:randWeights(.18)
+    }))
+  };
+}
+function cloneGenome(g){return JSON.parse(JSON.stringify(g))}
 function sanitizeGenome(g){
-  if(!g)g=seedGenome();
-  const n={...seedGenome(),...g};
-  n.freq=THREE.MathUtils.clamp(Number(n.freq)||.82,.48,1.10);
-  n.abductBase=THREE.MathUtils.clamp(Number(n.abductBase)||.28,.20,.42);
-  n.abductAmp=THREE.MathUtils.clamp(Number(n.abductAmp)||.06,.015,.14);
-  n.hipAmp=THREE.MathUtils.clamp(Number(n.hipAmp)||.20,.08,.34);
-  n.kneeLift=THREE.MathUtils.clamp(Number(n.kneeLift)||.28,.08,.46);
-  n.anklePush=THREE.MathUtils.clamp(Number(n.anklePush)||.14,.03,.28);
-  n.hipCenter=THREE.MathUtils.clamp(Number(n.hipCenter)||0,-.10,.10);
-  n.kneeBase=THREE.MathUtils.clamp(Number(n.kneeBase)||.06,.00,.18);
-  n.ankleBase=THREE.MathUtils.clamp(Number(n.ankleBase)||.02,-.12,.16);
-  n.turnGain=THREE.MathUtils.clamp(Number(n.turnGain)||.10,.03,.22);
-  n.kpAbduct=THREE.MathUtils.clamp(Number(n.kpAbduct)||5.5,3.5,8.5);
-  n.kpHip=THREE.MathUtils.clamp(Number(n.kpHip)||6.2,4.0,9.0);
-  n.kpKnee=THREE.MathUtils.clamp(Number(n.kpKnee)||6.5,4.2,9.5);
-  n.kpAnkle=THREE.MathUtils.clamp(Number(n.kpAnkle)||5.2,3.6,8.0);
-  if(!Array.isArray(n.phases)||n.phases.length!==4)n.phases=[0,Math.PI,Math.PI,0];
-  n.phases=n.phases.map((v,i)=>Number.isFinite(v)?v:[0,Math.PI,Math.PI,0][i]);
+  // Old sinusoidal genomes are intentionally NOT carried forward. They caused
+  // every update to preserve the same tap-dancing behavior.
+  if(!g || g.controller!=='policy-v1' || !Array.isArray(g.policies) || g.policies.length!==4){
+    return seedGenome();
+  }
+  const n=cloneGenome(g);
+  n.freq=THREE.MathUtils.clamp(Number(n.freq)||.72,.35,1.35);
+  n.phaseCoupling=THREE.MathUtils.clamp(Number(n.phaseCoupling)||.6,0,1.5);
+  n.outputGain=THREE.MathUtils.clamp(Number(n.outputGain)||.55,.18,1.0);
+  if(!Array.isArray(n.phaseOffsets)||n.phaseOffsets.length!==4)n.phaseOffsets=[0,Math.PI,Math.PI,0];
+  n.phaseOffsets=n.phaseOffsets.map((x,i)=>Number.isFinite(x)?x:[0,Math.PI,Math.PI,0][i]);
+  for(let i=0;i<4;i++){
+    if(!n.policies[i])n.policies[i]={};
+    for(const j of MOTOR_JOINTS){
+      if(!Array.isArray(n.policies[i][j])||n.policies[i][j].length!==MOTOR_FEATURES){
+        n.policies[i][j]=randWeights(.24);
+      }else{
+        n.policies[i][j]=n.policies[i][j].map(v=>THREE.MathUtils.clamp(Number(v)||0,-2.5,2.5));
+      }
+    }
+  }
   return n;
 }
-
+function mutateGenome(g,amt=.08){
+  const n=sanitizeGenome(g);
+  n.freq=THREE.MathUtils.clamp(n.freq+rand(-amt,amt)*.45,.35,1.35);
+  n.phaseCoupling=THREE.MathUtils.clamp(n.phaseCoupling+rand(-amt,amt)*.30,0,1.5);
+  n.outputGain=THREE.MathUtils.clamp(n.outputGain+rand(-amt,amt)*.20,.18,1.0);
+  n.phaseOffsets=n.phaseOffsets.map(v=>v+rand(-amt,amt)*.45);
+  for(let i=0;i<4;i++)for(const j of MOTOR_JOINTS){
+    const w=n.policies[i][j];
+    for(let k=0;k<w.length;k++){
+      if(Math.random()<.55)w[k]=THREE.MathUtils.clamp(w[k]+rand(-amt,amt)*.85,-2.5,2.5);
+    }
+  }
+  return n;
+}
+function policyOut(weights,features,gain){
+  let s=0;
+  for(let i=0;i<weights.length;i++)s+=weights[i]*features[i];
+  return Math.tanh(s)*gain;
+}
 function cvec(x=0,y=0,z=0){return new CANNON.Vec3(x,y,z)}
 function makePart(shape,mass,mat,pos,group=SHELL,mask=ENV|CREATURE){
  const b=new CANNON.Body({mass,material:mat,position:cvec(pos.x,pos.y,pos.z),linearDamping:.05,angularDamping:.22,allowSleep:false});
@@ -309,7 +332,7 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
    };
    legs.push({side,front,hipMountBody,upperBody,lowerBody,ankleMountBody,footBody,abduct,hip,knee,ankle,roll,strengths,index:i,
      health:{state:'normal',jamTime:0,relaxTime:0,limitHits:0},
-     motorPose:{abduct:side*.28,hip:0,knee:.06,ankle:.03,roll:0},
+     motorPose:{abduct:side*.22,hip:0,knee:.08,ankle:.02,roll:0},phase:0,
      grip:0,
      muscle:{
        abduct:{strength:.58,fatigue:0,use:0},
@@ -333,11 +356,11 @@ function createOrbsight(x=rand(-3,3),z=rand(-3,3)){
  development:{stage:0,stageName:'joint discovery',stageTime:0,stableTime:0,stepEvidence:0,walkEvidence:0},
  settlingTime:2.2,supportReflex:0,bodyClearance:0,
  skeleton:{corrections:0,lastReason:'none',cooldowns:[0,0,0,0]},
- motor:{genome,best:cloneGenome(genome),bestScore:-999,trialX:x,trialZ:z,trialTime:0,generation:1,collisions:0,falls:0,score:0,confidence:.28,energyStart:1,jointError:0},
+ motor:{genome,best:cloneGenome(genome),bestScore:-999,trialX:x,trialZ:z,trialTime:0,generation:1,collisions:0,falls:0,score:0,confidence:.18,energyStart:1,jointError:0,policyActivity:0},
  removed:false};
 
  parts.forEach(({body})=>body.addEventListener('collide',ev=>onCreatureCollision(o,ev.body)));
- orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.5.2 soft muscles + use-driven strength growth online','hot');logEvent(o,'motor deadlock protection online','hot');
+ orbs.push(o);logEvent(o,`brain ${BRAIN} online`,'hot');logEvent(o,'5-DOF legs connected; passive foot leveling online','hot');logEvent(o,'v0.6 learned motor policy online — no canned leg cycle','hot');logEvent(o,'motor deadlock protection online','hot');
  if(!selected)selectOrb(o);refreshOrbList();return o
 }
 function destroyOrb(o){o.removed=true;o.constraints.forEach(c=>world.removeConstraint(c));o.parts.forEach(({body,mesh})=>{world.removeBody(body);scene.remove(mesh)});scene.remove(o.eyeRoot);const i=orbs.indexOf(o);if(i>=0)orbs.splice(i,1);if(selected===o)selectOrb(orbs[0]||null);refreshOrbList()}
@@ -357,107 +380,124 @@ function onCreatureCollision(o,other){const it=other?other._thing:null;if(!it||!
 function interactNearby(o){for(const it of things){if(!it.active)continue;const d=Math.hypot(it.body.position.x-o.shellBody.position.x,it.body.position.z-o.shellBody.position.z);if(d>.9+it.r)continue;if(it.type==='food'){setThingActive(it,false);o.hunger=clamp(o.hunger-.48);o.energy=clamp(o.energy+.2);adjustInterest(o,'food',.08);short(o,'ate food successfully',.9);logEvent(o,'ate food — food interest increased','hot');setTimeout(()=>{it.body.position.set(rand(-17,17),it.r,rand(-17,17));it.mesh.position.set(it.body.position.x,it.body.position.y,it.body.position.z);it.body.aabbNeedsUpdate=true;setThingActive(it,true);updateObjectCount()},5000)}else if(it.type==='toy'||it.type==='marker'){const prev=o.lastThingHit.get(100000+it.id)||-99;if(simTime-prev>3){o.lastThingHit.set(100000+it.id,simTime);adjustInterest(o,it.type,.025);cooldownTarget(o,it,2.5);short(o,`investigated ${it.label}`,.55);logEvent(o,`investigated ${it.label}`)}}}}
 function driveGait(o,dt){
  const g=sanitizeGenome(o.motor.genome);o.motor.genome=g;
- const heading=shellHeading(o),turnErr=wrap(o.desiredHeading-heading),
- effort=o.energy<.16?.62:1,t=simTime*g.freq*Math.PI*2;
- const vestTilt=o.vestibular?.tilt||0,vestSpin=o.vestibular?.angularSpeed||0;
- const upr=uprightValue(o);
-
- // Clearance is the distance between the shell bottom and the floor.
+ const heading=shellHeading(o),headingErr=wrap(o.desiredHeading-heading);
  const shellBottom=o.shellBody.position.y-.62;
  o.bodyClearance=Math.max(0,shellBottom);
 
- // This is a spinal/body reflex, not a decision:
- // if the shell sinks too close to the floor, extend/support the legs harder.
- const clearanceNeed=THREE.MathUtils.clamp((.34-shellBottom)/.30,0,1);
- const tiltNeed=THREE.MathUtils.clamp(vestTilt/.9,0,1);
- const stabilityAssist=THREE.MathUtils.clamp(1+clearanceNeed*.42+tiltNeed*.24+vestSpin*.035,1,1.48);
- o.supportReflex=Math.max(clearanceNeed,tiltNeed*.65);
-
- // Damping helps prevent violent twisting but never chooses a direction.
- o.shellBody.angularDamping=THREE.MathUtils.clamp(.34+vestSpin*.04+tiltNeed*.08,.34,.62);
-
- let errSum=0,grounded=0,motorActivity=0;
- const collapseBoost=shellBottom<.22?1.28:1;
- const recoveryBoost=o.recoveryMode?1.18:1;
+ const vestTilt=o.vestibular?.tilt||0,vestSpin=o.vestibular?.angularSpeed||0;
+ const clearanceNeed=THREE.MathUtils.clamp((.30-shellBottom)/.28,0,1);
+ const tiltNeed=THREE.MathUtils.clamp(vestTilt/.95,0,1);
+ o.supportReflex=Math.max(clearanceNeed,tiltNeed*.55);
+ o.shellBody.angularDamping=THREE.MathUtils.clamp(.28+vestSpin*.035,.28,.52);
 
  if(o.settlingTime>0)o.settlingTime=Math.max(0,o.settlingTime-dt);
 
- o.legs.forEach((leg,i)=>{
-   const ph=t+g.phases[i];
-   // Smooth periodic gait with a longer planted portion and a shorter swing portion.
-   // This removes the rapid alternating toe-taps from v0.5.
-   const cyc=(Math.sin(ph)+1)*.5;
-   const swing=THREE.MathUtils.smoothstep(cyc,.66,.94);
-   const stance=1-swing;
-   const sweep=Math.cos(ph);
-   const turn=THREE.MathUtils.clamp(turnErr,-.75,.75)*leg.side*g.turnGain;
+ let errSum=0,grounded=0,motorActivity=0;
+ const effort=o.energy<.16?.58:1;
+ const support=1+clearanceNeed*.30+tiltNeed*.16;
 
-   let abductTarget=leg.side*(g.abductBase + sweep*g.abductAmp*.55);
-   let hipTarget=g.hipCenter-sweep*g.hipAmp*.86+turn;
-   let kneeTarget=g.kneeBase+swing*g.kneeLift*.88;
-   let ankleTarget=g.ankleBase-swing*.10+stance*g.anklePush*.72;
+ // Each leg owns an oscillator, like a tiny central pattern generator.
+ // Importantly, the oscillator does NOT define a gait. It is only one input to a
+ // learned policy alongside contact, proprioception, vestibular state, and heading.
+ for(let i=0;i<o.legs.length;i++){
+   const leg=o.legs[i];
+   const sensed=o.proprio.legs[i]||{angles:{spread:0,hip:0,knee:0,ankle:0,foot:0},speed:0,contact:false,load:0};
 
-   // Body-clearance reflex: wider feet + straighter knees when the shell sags.
-   // It modifies support posture only; heading and gait timing still come from the mind.
-   abductTarget += leg.side*(.10*clearanceNeed);
-   kneeTarget -= .16*clearanceNeed;
-   ankleTarget += .07*clearanceNeed;
+   // Contact gently slows the oscillator while the foot is loaded, encouraging
+   // stance phases to emerge instead of imposing one.
+   const contactSlow=sensed.contact?(1-g.phaseCoupling*.18):1;
+   leg.phase += dt*g.freq*Math.PI*2*contactSlow;
+   const phase=leg.phase+(g.phaseOffsets[i]||0);
 
-   // During the first couple seconds after spawn/load, blend toward a neutral stance.
-   // This prevents the saved genome from instantly folding a freshly restored skeleton.
-   if(o.settlingTime>0){
-     const b=THREE.MathUtils.clamp(o.settlingTime/1.25,0,1);
-     abductTarget=THREE.MathUtils.lerp(abductTarget,leg.side*.30,b);
-     hipTarget=THREE.MathUtils.lerp(hipTarget,0,b);
-     kneeTarget=THREE.MathUtils.lerp(kneeTarget,.04,b);
-     ankleTarget=THREE.MathUtils.lerp(ankleTarget,.03,b);
+   // Signed tilt: side legs react oppositely to lateral imbalance.
+   const up=cvec();o.shellBody.quaternion.vmult(cvec(0,1,0),up);
+   const sideTilt=THREE.MathUtils.clamp((-up.x*leg.side),-1,1);
+   const frontTilt=THREE.MathUtils.clamp((-up.z*leg.front),-1,1);
+   const tiltSignal=THREE.MathUtils.clamp(sideTilt*.65+frontTilt*.35,-1,1);
+
+   const contact=sensed.contact?1:0;
+   const jointVel=THREE.MathUtils.clamp((sensed.speed||0)/4,-1,1);
+   const turnSignal=THREE.MathUtils.clamp(headingErr*leg.side,-1,1);
+
+   const vals={
+     abduct:sensed.angles?.spread||0,
+     hip:sensed.angles?.hip||0,
+     knee:sensed.angles?.knee||0,
+     ankle:sensed.angles?.ankle||0,
+     foot:sensed.angles?.foot||0
+   };
+   const ranges={abduct:.58,hip:.60,knee:.88,ankle:.50,foot:.50};
+   const targets={};
+
+   for(const name of MOTOR_JOINTS){
+     const angleNorm=THREE.MathUtils.clamp(vals[name]/ranges[name],-1,1);
+     const features=[
+       1,
+       Math.sin(phase),
+       Math.cos(phase),
+       contact,
+       angleNorm,
+       jointVel,
+       tiltSignal,
+       turnSignal
+     ];
+     const raw=policyOut(g.policies[i][name],features,g.outputGain);
+     // Learned output is a *muscle activation target*, not a canned trajectory.
+     targets[name]=raw;
    }
 
-   // Muscles cannot teleport between poses. Smooth the brain's target before
-   // giving it to the joint motors; this keeps learning intact but removes stiff snapping.
-   const response=1-Math.exp(-dt*3.8);
+   // Convert normalized learned activations to legal joint targets.
+   let abductTarget=leg.side*.18 + targets.abduct*.34;
+   let hipTarget=targets.hip*.46;
+   let kneeTarget=.10 + (targets.knee*.5+.5)*.48; // mostly flexion, never inverted
+   let ankleTarget=targets.ankle*.34;
+   let rollTarget=targets.foot*.30;
+
+   // Low-level spinal support reflex only when the body is sagging.
+   abductTarget += leg.side*.07*clearanceNeed;
+   kneeTarget -= .10*clearanceNeed;
+   ankleTarget += .04*clearanceNeed;
+
+   if(o.settlingTime>0){
+     const b=THREE.MathUtils.clamp(o.settlingTime/1.0,0,1);
+     abductTarget=THREE.MathUtils.lerp(abductTarget,leg.side*.24,b);
+     hipTarget=THREE.MathUtils.lerp(hipTarget,0,b);
+     kneeTarget=THREE.MathUtils.lerp(kneeTarget,.10,b);
+     ankleTarget=THREE.MathUtils.lerp(ankleTarget,.03,b);
+     rollTarget=THREE.MathUtils.lerp(rollTarget,0,b);
+   }
+
+   // Muscle activation itself is compliant/slow.
+   const response=1-Math.exp(-dt*2.8);
    leg.motorPose.abduct=THREE.MathUtils.lerp(leg.motorPose.abduct,abductTarget,response);
    leg.motorPose.hip=THREE.MathUtils.lerp(leg.motorPose.hip,hipTarget,response);
    leg.motorPose.knee=THREE.MathUtils.lerp(leg.motorPose.knee,kneeTarget,response);
    leg.motorPose.ankle=THREE.MathUtils.lerp(leg.motorPose.ankle,ankleTarget,response);
-   abductTarget=leg.motorPose.abduct;hipTarget=leg.motorPose.hip;
-   kneeTarget=leg.motorPose.knee;ankleTarget=leg.motorPose.ankle;
+   leg.motorPose.roll=THREE.MathUtils.lerp(leg.motorPose.roll,rollTarget,response);
 
-   // Safer working ranges. The brain may explore inside these, but not fold a
-   // whole limb through the shell.
-   abductTarget=THREE.MathUtils.clamp(abductTarget,-.54,.54);
-   hipTarget=THREE.MathUtils.clamp(hipTarget,-.56,.56);
-   kneeTarget=THREE.MathUtils.clamp(kneeTarget,-.04,.82);
-   ankleTarget=THREE.MathUtils.clamp(ankleTarget,-.38,.46);
+   const localBoost=effort*support*(leg.health.relaxTime>0?.72:1);
+   const a0=driveJoint(leg.abduct,leg.motorPose.abduct,3.2,1.45,4.5*leg.strengths.abduct*muscleCapacity(leg.muscle.abduct)*localBoost,-.58,.58,.72,.80);
+   const a=driveJoint(leg.hip,leg.motorPose.hip,3.4,1.55,5.2*leg.strengths.hip*muscleCapacity(leg.muscle.hip)*localBoost,-.60,.60,.74,.82);
+   const b=driveJoint(leg.knee,leg.motorPose.knee,3.5,1.65,5.1*leg.strengths.knee*muscleCapacity(leg.muscle.knee)*localBoost,-.06,.88,.76,.80);
+   const c=driveJoint(leg.ankle,leg.motorPose.ankle,3.1,1.45,4.2*leg.strengths.ankle*muscleCapacity(leg.muscle.ankle)*localBoost,-.42,.50,.78,.84);
 
-   const boost=effort*collapseBoost*recoveryBoost*stabilityAssist;
-   let localBoost=boost;
-   if(leg.health.relaxTime>0)localBoost*=.62; // don't "turn the leg off"
-
-   const a0=driveJoint(leg.abduct,abductTarget,g.kpAbduct*.70,1.80,5.0*leg.strengths.abduct*muscleCapacity(leg.muscle.abduct)*localBoost,-.58,.58,.62,.68);
-   const a=driveJoint(leg.hip,hipTarget,g.kpHip*.68,1.95,5.8*leg.strengths.hip*muscleCapacity(leg.muscle.hip)*localBoost,-.60,.60,.66,.70);
-   const b=driveJoint(leg.knee,kneeTarget,g.kpKnee*.67,2.05,5.7*leg.strengths.knee*muscleCapacity(leg.muscle.knee)*localBoost,-.06,.88,.68,.68);
-   const c=driveJoint(leg.ankle,ankleTarget,g.kpAnkle*.66,1.85,4.6*leg.strengths.ankle*muscleCapacity(leg.muscle.ankle)*localBoost,-.42,.50,.70,.72);
-
+   // Foot leveling is still a body reflex, blended with the learned foot command.
    const footY=leg.footBody.position.y;
    const nearGround=clamp(1-(footY-.05)/.24);
-   const rollNow=hingeAngle(leg.roll);
-   const correction=signedLevelCorrection(leg.roll,leg.footBody);
-   const rollTarget=THREE.MathUtils.clamp(rollNow+correction*nearGround,-.46,.46);
-   const d=driveJoint(leg.roll,rollTarget,3.5+nearGround*2.6,1.75,
-     4.1*leg.strengths.foot*muscleCapacity(leg.muscle.foot)*(.82+.38*nearGround)*recoveryBoost,-.50,.50,.72,.74);
+   const levelCorrection=signedLevelCorrection(leg.roll,leg.footBody);
+   const finalRoll=THREE.MathUtils.clamp(leg.motorPose.roll+levelCorrection*nearGround*.72,-.50,.50);
+   const d=driveJoint(leg.roll,finalRoll,2.8+nearGround*1.8,1.35,
+     3.8*leg.strengths.foot*muscleCapacity(leg.muscle.foot)*localBoost,-.50,.50,.82,.86);
 
-   // Passive plantar traction: when a foot is actually planted, damp horizontal slip.
-   // It never pushes toward a target; it only resists sliding at the contact patch.
-   const planted=THREE.MathUtils.clamp(nearGround*stance,0,1);
-   leg.grip=THREE.MathUtils.lerp(leg.grip,planted,1-Math.exp(-dt*10));
-   if(leg.grip>.05){
-     const retain=Math.pow(.11,dt*leg.grip); // stronger grip -> faster slip decay
+   // Grip is based on real contact/load, not a prewritten stance phase.
+   const planted=THREE.MathUtils.clamp(nearGround*(sensed.contact?.65+.35*(sensed.load||0):0),0,1);
+   leg.grip=THREE.MathUtils.lerp(leg.grip,planted,1-Math.exp(-dt*9));
+   if(leg.grip>.04){
+     const retain=Math.pow(.10,dt*leg.grip);
      leg.footBody.velocity.x*=retain;
      leg.footBody.velocity.z*=retain;
-     // modest yaw/roll damping while loaded so the sole does not chatter.
-     leg.footBody.angularVelocity.x*=Math.pow(.34,dt*leg.grip);
-     leg.footBody.angularVelocity.z*=Math.pow(.34,dt*leg.grip);
+     leg.footBody.angularVelocity.x*=Math.pow(.42,dt*leg.grip);
+     leg.footBody.angularVelocity.z*=Math.pow(.42,dt*leg.grip);
    }
 
    trainMuscle(leg.muscle.abduct,a0.effort,a0.motion,dt);
@@ -466,54 +506,20 @@ function driveGait(o,dt){
    trainMuscle(leg.muscle.ankle,c.effort,c.motion,dt);
    trainMuscle(leg.muscle.foot,d.effort,d.motion,dt);
 
-   const qs=[a0,a,b,c,d],nearLimitCount=qs.filter(q=>q.nearLimit).length;
-   if(nearLimitCount>=2)leg.health.limitHits+=dt;
-   else leg.health.limitHits=Math.max(0,leg.health.limitHits-dt*2.1);
-
-   // Relaxation is now short and partial. v0.4 could leave a limb functionally dead.
-   if(nearLimitCount>=4 && o.shellBody.velocity.length()<.12)leg.health.jamTime+=dt;
-   else leg.health.jamTime=Math.max(0,leg.health.jamTime-dt*2);
-
-   if(leg.health.jamTime>.65 && leg.health.relaxTime<=0){
-     leg.health.relaxTime=.38;leg.health.jamTime=0;leg.health.state='relaxing';
-     logEvent(o,`leg ${i+1} briefly relaxed from a joint jam`,'bad');
-   }
-   if(leg.health.relaxTime>0){
-     leg.health.relaxTime=Math.max(0,leg.health.relaxTime-dt);leg.health.state='relaxing';
-   }else if(leg.health.limitHits>.55)leg.health.state='strained';
-   else leg.health.state='normal';
-
-   // v0.5 uses a post-physics hard skeleton validator instead of velocity
-   // pushes here. That avoids competing forces folding the articulated chain.
+   const qs=[a0,a,b,c,d];
+   const nearLimitCount=qs.filter(q=>q.nearLimit).length;
+   if(nearLimitCount>=3)leg.health.limitHits+=dt;
+   else leg.health.limitHits=Math.max(0,leg.health.limitHits-dt*2.2);
+   leg.health.state=leg.health.limitHits>.6?'strained':'normal';
 
    errSum+=Math.abs(a0.error)+Math.abs(a.error)+Math.abs(b.error)+Math.abs(c.error);
    motorActivity+=qs.reduce((s,q)=>s+Math.abs(q.speed),0);
-   if(footY<.13)grounded++;
- });
-
+   if(sensed.contact)grounded++;
+ }
  o.lastContactCount=grounded;
  o.motor.jointError=errSum/16;
- o.motorOutput=clamp(motorActivity/(o.legs.length*5*3.5));
-
- const horizSpeed=Math.hypot(o.shellBody.velocity.x,o.shellBody.velocity.z);
- if(o.motorOutput>.10 && horizSpeed<.035 && !o.recoveryMode)o.motorStallTimer+=dt;
- else o.motorStallTimer=Math.max(0,o.motorStallTimer-dt*1.8);
-
- // Torque reserve keeps the body active without selecting a gait.
- if(o.motorStallTimer>1.7){
-   o.legs.forEach(leg=>{
-     leg.hip.hinge.setMotorMaxForce(7.8*leg.strengths.hip);
-     leg.knee.hinge.setMotorMaxForce(7.4*leg.strengths.knee);
-     leg.ankle.hinge.setMotorMaxForce(6.0*leg.strengths.ankle);
-     leg.abduct.hinge.setMotorMaxForce(6.6*leg.strengths.abduct);
-     leg.roll.hinge.setMotorMaxForce(5.0*leg.strengths.foot);
-   });
- }
- if(o.motorStallTimer>3.2){
-   o.legs.forEach(leg=>{leg.health.relaxTime=0;leg.health.jamTime=0;leg.health.limitHits=0;leg.health.state='normal'});
-   o.motorStallTimer=.8;
-   logEvent(o,'persistent stall — muscle locks cleared','hot');
- }
+ o.motorOutput=clamp(motorActivity/(o.legs.length*5*2.2));
+ o.motor.policyActivity=o.motorOutput;
 }
 
 
@@ -760,28 +766,42 @@ function updateDevelopment(o,dt){
   }else d.stageName=names[d.stage];
 }
 function evaluateMotor(o){
- const m=o.motor;if(simTime-m.trialTime<7.5)return;
- const dx=o.shellBody.position.x-m.trialX,dz=o.shellBody.position.z-m.trialZ,dist=Math.hypot(dx,dz);
- const upr=uprightValue(o),energyUsed=Math.max(0,m.energyStart-o.energy),d=o.development;
- const control=clamp(1-o.motor.jointError*.55),sym=o.proprio.loadSymmetry,contacts=o.proprio.contactCount/4;
+ const m=o.motor;if(simTime-m.trialTime<8.5)return;
+ const dx=o.shellBody.position.x-m.trialX,dz=o.shellBody.position.z-m.trialZ;
+ const dist=Math.hypot(dx,dz);
+ const upr=uprightValue(o),energyUsed=Math.max(0,m.energyStart-o.energy);
+ const d=o.development,control=clamp(1-o.motor.jointError*.48);
+ const sym=o.proprio.loadSymmetry,contacts=o.proprio.contactCount/4;
+
+ const f=shellForward(o);
+ const forwardProgress=dx*f.x+dz*f.z;
+ const lateral=Math.abs(dx*f.z-dz*f.x);
+ const activity=clamp(o.motor.policyActivity||0);
+
  let score=0;
- // Development changes the reward, not the commanded gait.
- if(d.stage===0)score=control*3 + o.motorOutput*1.8 + upr*.5 - m.collisions*.15;
- else if(d.stage===1)score=upr*3 + sym*2 + contacts*1.2 - m.falls*2.5 - o.vestibular.angularSpeed*.12;
- else if(d.stage===2)score=upr*2.5 + contacts*1.4 + control + sym - m.falls*2.4;
- else if(d.stage===3)score=dist*1.2 + upr*2 + contacts + control - m.falls*2.5 - m.collisions*.25;
- else score=dist*2.2+upr*2.4+sym*.6-m.collisions*.35-m.falls*3-energyUsed*.8-o.motor.jointError*.15;
+ if(d.stage===0) score=activity*2.2+control*2+upr*.8-m.falls*1.5;
+ else if(d.stage===1) score=upr*3+sym*2+contacts+control- o.vestibular.angularSpeed*.12-m.falls*2.2;
+ else if(d.stage===2) score=upr*2.6+contacts*1.4+sym+control+activity*.4-m.falls*2.4;
+ else if(d.stage===3) score=Math.max(0,forwardProgress)*1.4+dist*.35+upr*2+contacts+control-lateral*.25-m.falls*2.4;
+ else score=Math.max(0,forwardProgress)*2.4+dist*.45+upr*2.2+sym*.6-lateral*.25-m.collisions*.30-m.falls*3-energyUsed*.65;
+
+ // Persistent backwards-only motion is explicitly less useful than controlled
+ // exploration, but backwards movement is not forbidden.
+ if(forwardProgress<-.06)score+=forwardProgress*.8;
+
  m.score=score;
- if(score>m.bestScore+.03){
-   m.bestScore=score;m.best=cloneGenome(m.genome);m.confidence=clamp(m.confidence+.045);
-   logEvent(o,`G${m.generation} kept for ${d.stageName} (score ${score.toFixed(2)})`,'hot');
+ if(score>m.bestScore+.025){
+   m.bestScore=score;m.best=cloneGenome(m.genome);
+   m.confidence=clamp(m.confidence+.04);
+   logEvent(o,`G${m.generation} motor policy kept (${d.stageName}, ${score.toFixed(2)})`,'hot');
  }else{
    m.genome=cloneGenome(m.best);
-   logEvent(o,`G${m.generation} rejected for ${d.stageName} (score ${score.toFixed(2)})`);
+   logEvent(o,`G${m.generation} motor policy rejected (${score.toFixed(2)})`);
  }
- const base=[.18,.15,.12,.10,.075,.055][d.stage]||.06;
- const amt=Math.max(.025,base-m.generation*.0015);
- m.genome=mutateGenome(m.genome,amt);m.generation++;m.collisions=0;m.falls=0;
+ const base=[.20,.17,.14,.11,.085,.07][d.stage]||.08;
+ const amt=Math.max(.035,base-m.generation*.0012);
+ m.genome=mutateGenome(m.genome,amt);
+ m.generation++;m.collisions=0;m.falls=0;
  m.trialX=o.shellBody.position.x;m.trialZ=o.shellBody.position.z;m.trialTime=simTime;m.energyStart=o.energy;
 }
 function checkStuck(o,dt){const dx=o.shellBody.position.x-o.lastProgressPos.x,dz=o.shellBody.position.z-o.lastProgressPos.z,d=Math.hypot(dx,dz);if(d>.14){o.lastProgressPos={x:o.shellBody.position.x,z:o.shellBody.position.z};o.stuckTimer=Math.max(0,o.stuckTimer-dt*2)}else o.stuckTimer+=dt;if(o.stuckTimer>2.8&&o.target){adjustInterest(o,o.target.type,-.035);cooldownTarget(o,o.target,3+o.personality.patience*3);logEvent(o,`stuck — gave up on ${o.target.label}`,'bad');o.target=null;o.desiredHeading=shellHeading(o)+rand(1.1,2.5)*(Math.random()<.5?-1:1);o.stuckTimer=0}}
@@ -812,7 +832,7 @@ function poseUpright(o,x,z){
    o.skeleton.cooldowns[i]=.18;
  });
  o.settlingTime=1.25;
- o.motorStallTimer=0;
+ o.motorStallTimer=0;o.legs.forEach((leg,i)=>{leg.phase=(o.motor.genome?.phaseOffsets?.[i]||0);});
 }
 
 function updateEye(o,dt){const eyek=18,eyed=6;o.eyeYawVel+=((o.targetEyeYaw-o.eyeYaw)*eyek-o.eyeYawVel*eyed)*dt;o.eyeYaw+=o.eyeYawVel*dt;o.eyePitchVel+=((o.targetEyePitch-o.eyePitch)*eyek-o.eyePitchVel*eyed)*dt;o.eyePitch+=o.eyePitchVel*dt}
