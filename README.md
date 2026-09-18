@@ -594,3 +594,54 @@ The v0.5 hard skeleton validator remains active:
 - no persistent shell penetration
 - no persistent leg merging
 - no persistent impossible joint angle
+
+
+# Orbsight v0.7 — Relaxed Bodies + Physics World
+
+## The stiffness fix
+
+v0.6 still behaved stiffly because every learned output was converted into a joint *position*
+and the motor continuously tried to hold that position.
+
+v0.7 changes the interpretation closer to low-tone muscles:
+
+- policy output now nudges the current joint angle instead of commanding a distant absolute pose
+- motor force falls dramatically when learned activation is small
+- knees have especially low holding force when the foot is not loaded
+- knees have a weak passive resting bend around 0.24 radians
+- joint target smoothing is slower
+- limb angular damping is lower
+- feet retain grip when actually loaded
+
+The expected result is visible sag, wobble, relaxed knees, and more contact-driven movement.
+The v0.5 hard skeleton remains the safety layer so "floppy" cannot become "inside-out."
+
+## Pushable physics objects
+
+New editable world objects:
+- Pushable block
+- Physics ball
+- Rolling log
+- Raised platform
+
+Pushable blocks, balls, and logs are Cannon rigid bodies with mass, velocity, angular velocity,
+friction, and collisions against the Orbsights, terrain, and each other.
+
+Orbsights do not receive a scripted "push" action. If their body or legs physically contact a
+dynamic object while moving, the object moves from the collision.
+
+## Balls
+
+Balls have low rolling damping and can be shoved, rolled, trapped between objects, or knocked
+off raised terrain.
+
+## Layered terrain
+
+The default world now contains two low terrace groups at increasing heights. They are static
+physics platforms, so Orbsights can discover stepping/climbing behavior through normal contact
+and motor learning.
+
+## Persistence
+
+Dynamic object position and velocity are saved. Existing Orbsight personality, memory, motor
+policy, muscle strength, fatigue, and developmental state continue to persist.
