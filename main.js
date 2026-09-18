@@ -1,202 +1,69 @@
+import * as THREE from "three";
+import {OrbitControls} from "three/addons/controls/OrbitControls.js";
+import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,enforceAnatomy,syncBody,destroyBody} from "./physics.js";
+import {setupWorld,addObject,resetMap,updateWorld,clearObjects} from "./world.js";
+import {attachMind,updateMind,cleanupMind} from "./mind.js";
 
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/controls/OrbitControls.js';
+const BUILD="0.10-modular-joint-rebuild-2026-09-18";
+const $=id=>document.getElementById(id);
+const canvas=$("c"),renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x0b1016);scene.fog=new THREE.Fog(0x0b1016,38,92);
+const camera=new THREE.PerspectiveCamera(55,1,.05,130);camera.position.set(8,7,11);
+const controls=new OrbitControls(camera,canvas);controls.enableDamping=true;controls.maxDistance=52;controls.target.set(0,.8,0);
+scene.add(new THREE.HemisphereLight(0xbfd8ff,0x273020,1.25));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(12,18,8);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);scene.add(sun);
 
-const canvas=document.querySelector('#world');
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x0b1016);
-scene.fog=new THREE.Fog(0x0b1016,18,42);
+const P=createPhysics();
+const app={scene,camera,renderer,controls,sun,P,GROUP:P.GROUP,objects:[],orbs:[],selected:null,nextOrbId:1,nextObjectId:1,simTime:0,timeScale:1,paused:false};
+setupWorld(app);
 
-const camera=new THREE.PerspectiveCamera(55,1,.1,100);
-camera.position.set(8,7,10);
-
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;
-
-const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableDamping=true;
-controls.target.set(0,1,0);
-
-scene.add(new THREE.HemisphereLight(0xcdd8ff,0x203020,2.2));
-const sun=new THREE.DirectionalLight(0xffffff,2.4);
-sun.position.set(8,12,6);
-sun.castShadow=true;
-scene.add(sun);
-
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(42,42),new THREE.MeshStandardMaterial({color:0x202a27,roughness:1}));
-floor.rotation.x=-Math.PI/2;
-floor.receiveShadow=true;
-scene.add(floor);
-
-const grid=new THREE.GridHelper(42,42,0x34443f,0x27342f);
-grid.position.y=.005;
-scene.add(grid);
-
-const worldThings=[];
-function addThing(type,x,z,color,radius=.5){
-  let mesh;
-  if(type==='wall'){
-    mesh=new THREE.Mesh(new THREE.BoxGeometry(radius*2,1.4,radius*2),new THREE.MeshStandardMaterial({color}));
-    mesh.position.set(x,.7,z);
-  }else{
-    mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,24,16),new THREE.MeshStandardMaterial({color,roughness:.65}));
-    mesh.position.set(x,radius,z);
-  }
-  mesh.castShadow=true; mesh.receiveShadow=true; scene.add(mesh);
-  const item={type,mesh,radius:type==='wall'?radius*1.15:radius};
-  worldThings.push(item); return item;
+function resize(){const r=canvas.getBoundingClientRect(),w=Math.max(1,r.width),h=Math.max(1,r.height);if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio()))renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+function addOrb(x=(Math.random()-.5)*4,z=(Math.random()-.5)*4){if(app.orbs.length>=20)return;const o=createOrbsightBody(P,scene,app.nextOrbId++,x,z);attachMind(app,o);app.orbs.push(o);if(!app.selected)app.selected=o;refreshList();return o}
+function removeAllOrbs(){for(const o of [...app.orbs]){cleanupMind(app,o);destroyBody(P,scene,o)}app.orbs.length=0;app.selected=null}
+function reset(){removeAllOrbs();resetMap(app);addOrb(0,0);addOrb(1.5,.4);addOrb(-1.3,.6);app.selected=app.orbs[0];refreshList()}
+function refreshList(){
+  $("popCount").textContent=`(${app.orbs.length}/20)`;$("orbList").innerHTML="";
+  for(const o of app.orbs){const d=document.createElement("div");d.className="orbrow"+(o===app.selected?" selected":"");const s=document.createElement("span");s.textContent=`${o.mind.name} • G${o.mind.generation}`;const b=document.createElement("button");b.textContent="Select";b.addEventListener("click",()=>{app.selected=o;refreshList()});d.append(s,b);$("orbList").append(d)}
 }
-addThing('food',-5,-3,0x58cc73,.55);
-addThing('food',4,-5,0x58cc73,.48);
-addThing('food',6,4,0x58cc73,.62);
-addThing('danger',-6,5,0xe85c5c,.65);
-addThing('danger',1,7,0xe85c5c,.52);
-addThing('wall',-2,2,0x727b88,1.1);
-addThing('wall',3,1,0x727b88,1.35);
-addThing('wall',0,-6,0x727b88,1.0);
-
-const orb=new THREE.Group();
-scene.add(orb);
-
-const shell=new THREE.Mesh(new THREE.SphereGeometry(1.25,40,28),new THREE.MeshStandardMaterial({color:0xd9d4c8,roughness:.78}));
-shell.position.y=1.55; shell.castShadow=true; orb.add(shell);
-
-const eyeWhite=new THREE.Mesh(new THREE.SphereGeometry(.47,32,20),new THREE.MeshStandardMaterial({color:0xf4f3ec,roughness:.55}));
-eyeWhite.scale.z=.55; eyeWhite.position.set(0,1.7,1.12); orb.add(eyeWhite);
-
-const pupil=new THREE.Mesh(new THREE.SphereGeometry(.20,24,16),new THREE.MeshStandardMaterial({color:0x101216,roughness:.45}));
-pupil.scale.z=.5; pupil.position.set(0,1.72,1.48); orb.add(pupil);
-
-const legMat=new THREE.MeshStandardMaterial({color:0x34373d,roughness:.9});
-const legs=[];
-for(const sx of [-1,1]){
-  for(const sz of [-.65,.65]){
-    const g=new THREE.Group();
-    const upper=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.85,10),legMat);
-    const lower=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.8,10),legMat);
-    upper.rotation.z=sx*.65; upper.rotation.x=sz*.35; upper.position.set(sx*.95,.75,sz+.05);
-    lower.rotation.z=sx*.15; lower.position.set(sx*1.25,.28,sz*1.15);
-    g.add(upper,lower); orb.add(g); legs.push(g);
-  }
+function refreshUI(){
+  const o=app.selected;if(!o)return;const m=o.mind;
+  $("nameT").textContent=m.name;$("thoughtT").textContent=m.thought;$("stageT").textContent=m.stageName;$("energyT").textContent=Math.round(m.energy*100)+"%";$("uprightT").textContent=Math.round((o.upright*.5+.5)*100)+"%";$("contactsT").textContent=o.contacts+"/4";$("genT").textContent=m.generation;$("rewardT").textContent=m.dense.toFixed(3);$("fragmentsT").textContent=m.fragments.length;$("guardsT").textContent=o.guardHits;$("foldT").textContent=o.foldRisk.toFixed(3);$("gripsT").textContent=o.legs.filter(l=>l.grip).length+"/4";$("sleepT").textContent=m.sleep.sleeping?"sleeping":"awake";
+  $("jointT").innerHTML=o.legs.map(l=>`L${l.index+1}: hip ${(l.angles?.hip??0).toFixed(2)} • knee ${(l.angles?.knee??0).toFixed(2)} • ankle ${(l.angles?.ankle??0).toFixed(2)}${l.grip?" • GRIP":""}`).join("<br>");
+  $("events").textContent=`Best score: ${m.bestScore<=-900?"learning":m.bestScore.toFixed(2)} • sleep gain: ${m.sleep.lastGain}`;
+  $("objCount").textContent=`${app.objects.length} objects`;
+  $("buildT").textContent=`${BUILD} • ${app.timeScale}×`;
 }
+$("pause").addEventListener("click",e=>{app.paused=!app.paused;e.currentTarget.textContent=app.paused?"Resume":"Pause"});
+$("timeScale").addEventListener("change",e=>app.timeScale=Math.max(.5,Math.min(15,Number(e.target.value)||1)));
+$("addOrb").addEventListener("click",()=>addOrb());
+$("reset").addEventListener("click",reset);
+$("addObject").addEventListener("click",()=>addObject(app,$("objectType").value,Number($("objX").value)||0,Number($("objZ").value)||0,1));
+$("randomObject").addEventListener("click",()=>addObject(app,$("objectType").value,(Math.random()-.5)*55,(Math.random()-.5)*55,1));
+window.addEventListener("resize",resize);
 
-let heading=0,targetHeading=0,speed=0,paused=false,follow=true,thought='Looking around...',curiosity=.72,fear=.08,touchPulse=0;
-const ui={
-  visionText:document.querySelector('#visionText'),touchText:document.querySelector('#touchText'),
-  thought:document.querySelector('#thought'),seenList:document.querySelector('#seenList'),
-  visionBar:document.querySelector('#visionBar'),touchBar:document.querySelector('#touchBar'),
-  curiosityBar:document.querySelector('#curiosityBar'),fearBar:document.querySelector('#fearBar'),
-  curiosityText:document.querySelector('#curiosityText'),fearText:document.querySelector('#fearText')
-};
-ui.curiosityBar.style.width=`${curiosity*100}%`; ui.fearBar.style.width=`${fear*100}%`;
-
-const tmp=new THREE.Vector3(),forward=new THREE.Vector3(),seen=[];
-function angleWrap(a){while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;}
-
-function sense(){
-  seen.length=0; forward.set(Math.sin(heading),0,Math.cos(heading));
-  let nearest=null;
-  for(const item of worldThings){
-    tmp.copy(item.mesh.position).sub(orb.position); tmp.y=0;
-    const dist=tmp.length(),dir=tmp.clone().normalize(),dot=forward.dot(dir);
-    if(dist<8&&dot>.38){
-      const angle=Math.acos(Math.min(1,Math.max(-1,dot)));
-      seen.push({item,dist,angle});
-      if(!nearest||dist<nearest.dist) nearest={item,dist,angle};
+reset();$("status").textContent="v0.10 modular engine running";
+const clock=new THREE.Clock(),FIXED=1/180;let acc=0,uiTimer=0;
+function frame(){
+  requestAnimationFrame(frame);const realDt=Math.min(.05,clock.getDelta());resize();
+  if(!app.paused){
+    acc+=realDt*app.timeScale;let steps=0;
+    while(acc>=FIXED&&steps<120){
+      app.simTime+=FIXED;
+      for(const o of app.orbs){
+        updateBodySensors(o,app.objects);
+        const cmd=updateMind(app,o,FIXED);
+        if(!o.mind.sleep.sleeping)o.mind.activity=driveBody(o,cmd,FIXED);
+        enforceAnatomy(o,FIXED);
+      }
+      updateWorld(app,FIXED);P.world.step(FIXED);acc-=FIXED;steps++;
     }
+    if(steps>=120)acc=0;
+    for(const o of app.orbs)syncBody(o);
   }
-  seen.sort((a,b)=>a.dist-b.dist);
-  if(nearest){
-    ui.visionText.textContent=`${nearest.item.type} ${nearest.dist.toFixed(1)}m`;
-    ui.visionBar.style.width=`${Math.max(8,100-nearest.dist*11)}%`;
-  }else{
-    ui.visionText.textContent='nothing'; ui.visionBar.style.width='4%';
-  }
-  ui.seenList.innerHTML=seen.length?seen.slice(0,5).map(s=>`<li>${s.item.type} — ${s.dist.toFixed(1)}m</li>`).join(''):'<li>none yet</li>';
-  return nearest;
+  uiTimer-=realDt;if(uiTimer<=0){refreshUI();refreshList();uiTimer=.30}
+  if(app.selected){const p=app.selected.shell.position,des=new THREE.Vector3(p.x+7,p.y+5.2,p.z+8.2);camera.position.lerp(des,.018);controls.target.lerp(new THREE.Vector3(p.x,p.y,p.z),.04)}
+  controls.update();renderer.render(scene,camera)
 }
-
-function decide(nearest){
-  if(nearest&&nearest.item.type==='danger'&&nearest.dist<4.5){
-    fear=Math.min(1,fear+.12); thought='Danger seen. Backing away.';
-    const p=nearest.item.mesh.position;
-    targetHeading=Math.atan2(orb.position.x-p.x,orb.position.z-p.z); speed=.95;
-  }else if(nearest&&nearest.item.type==='food'&&curiosity>.45){
-    fear=Math.max(.04,fear-.015); thought='Interesting green object. Investigating.';
-    const p=nearest.item.mesh.position;
-    targetHeading=Math.atan2(p.x-orb.position.x,p.z-orb.position.z); speed=.72;
-  }else{
-    fear=Math.max(.04,fear-.006); thought='Nothing urgent. Wandering.';
-    if(Math.random()<.28) targetHeading+=(Math.random()-.5)*1.6;
-    speed=.36;
-  }
-  ui.thought.textContent=thought;
-  ui.fearText.textContent=`${Math.round(fear*100)}%`;
-  ui.fearBar.style.width=`${fear*100}%`;
-}
-
-let thinkTimer=0;
-function collideAndTouch(dt){
-  touchPulse=Math.max(0,touchPulse-dt*2.6); let touching=null;
-  for(const item of worldThings){
-    const dx=orb.position.x-item.mesh.position.x,dz=orb.position.z-item.mesh.position.z;
-    const dist=Math.hypot(dx,dz),minDist=1.05+item.radius;
-    if(dist<minDist){
-      touching=item.type; touchPulse=1;
-      const nx=dx/(dist||1),nz=dz/(dist||1);
-      orb.position.x=item.mesh.position.x+nx*minDist;
-      orb.position.z=item.mesh.position.z+nz*minDist;
-      targetHeading+=Math.PI*.65+(Math.random()-.5); speed*=.35;
-    }
-  }
-  const edge=18.5;
-  if(Math.abs(orb.position.x)>edge||Math.abs(orb.position.z)>edge){
-    orb.position.x=THREE.MathUtils.clamp(orb.position.x,-edge,edge);
-    orb.position.z=THREE.MathUtils.clamp(orb.position.z,-edge,edge);
-    targetHeading+=Math.PI; touching='world edge'; touchPulse=1;
-  }
-  ui.touchText.textContent=touching||'none';
-  ui.touchBar.style.width=`${touchPulse*100}%`;
-}
-
-let walkT=0;
-function animateBody(dt){walkT+=dt*speed*10;legs.forEach((leg,i)=>{leg.rotation.x=Math.sin(walkT+i*Math.PI)*.12*speed;});}
-
-const clock=new THREE.Clock();
-function resize(){
-  const rect=canvas.getBoundingClientRect(),w=Math.max(1,rect.width),h=Math.max(1,rect.height);
-  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
-}
-
-function tick(){
-  requestAnimationFrame(tick);
-  const dt=Math.min(.05,clock.getDelta());
-  resize();
-
-  if(!paused){
-    thinkTimer-=dt;
-    if(thinkTimer<=0){const nearest=sense();decide(nearest);thinkTimer=.65+Math.random()*.35;}
-    const delta=angleWrap(targetHeading-heading);
-    heading+=THREE.MathUtils.clamp(delta,-dt*2.8,dt*2.8);
-    orb.rotation.y=heading;
-    orb.position.x+=Math.sin(heading)*speed*dt;
-    orb.position.z+=Math.cos(heading)*speed*dt;
-    collideAndTouch(dt);
-    animateBody(dt);
-  }
-
-  if(follow){
-    const desired=new THREE.Vector3(orb.position.x+7.5,6.3,orb.position.z+9);
-    camera.position.lerp(desired,.025);
-    controls.target.lerp(new THREE.Vector3(orb.position.x,1.2,orb.position.z),.05);
-  }
-
-  controls.update(); renderer.render(scene,camera);
-}
-tick();
-
-document.querySelector('#pauseBtn').addEventListener('click',e=>{paused=!paused;e.currentTarget.textContent=paused?'Resume':'Pause';});
-document.querySelector('#followBtn').addEventListener('click',e=>{follow=!follow;e.currentTarget.textContent=`Follow: ${follow?'ON':'OFF'}`;});
-document.querySelector('#resetBtn').addEventListener('click',()=>{orb.position.set(0,0,0);heading=targetHeading=0;fear=.08;thought='Looking around...';ui.thought.textContent=thought;});
-window.addEventListener('resize',resize);
+frame();
+window.addEventListener("error",e=>{$("err").hidden=false;$("err").textContent=e.error?.stack||e.message||String(e.error);$("status").textContent="startup/runtime error — see panel"});
