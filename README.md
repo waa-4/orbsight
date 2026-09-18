@@ -339,3 +339,84 @@ A low-level anatomical reflex now also:
 
 A new `Leg separation` readout shows the approximate minimum distance between lower
 limb/foot bodies of different legs.
+
+
+# Orbsight v0.5 — Skeleton Rebuild
+
+This version stops trying to solve the folding bug with progressively stronger motor reflexes.
+The mind, personality, memory, vestibular system, proprioception, developmental learning,
+world interaction, and browser persistence are retained. The locomotion skeleton is rebuilt
+around physical invariants.
+
+## Why the old legs kept folding
+
+Earlier versions clamped the *desired motor angle*, but a rigid-body solver could still push
+the real joint outside that desired range during collisions or accumulated constraint error.
+Self-collision helped, but it did not make the angle itself physically impossible.
+
+v0.5 therefore has two layers:
+
+1. normal muscles/tendons and collision physics
+2. a post-physics anatomical validator that runs before every rendered frame
+
+## Hard anatomical invariants
+
+The validator checks:
+- hip spread range
+- hip swing range
+- knee range (strong one-direction bias)
+- ankle pitch range
+- foot roll range
+- lower-leg/ankle/foot penetration into the shell
+- geometric crossing/overlap between separate leg segments
+- merged feet
+
+If physics ever produces an impossible state, only the affected leg is reconstructed at its
+neutral attachment pose immediately after the physics step and before the frame is rendered.
+
+This is intentionally **not** a brain action. A real animal does not need to learn that its
+knee bones cannot pass through one another. It is a property of the skeleton.
+
+## Anti-merge design
+
+Separate legs still use independent collision groups and collide with:
+- the shell
+- the environment
+- the other three legs
+
+v0.5 additionally calculates distances between the actual upper/lower leg centerline segments.
+If two different legs geometrically cross or occupy the same anatomical space, both are restored
+to valid positions before rendering.
+
+This means the previous failure state—folding, phasing into one another, and remaining merged—
+should no longer persist.
+
+## Natural stance
+
+Fresh and restored Orbsights now start with:
+- a slightly higher shell
+- lower joints farther outward than the hips
+- feet farther outward again
+- 2.5 seconds of settling
+
+The brain still has to learn useful locomotion. The stance only gives the skeleton a physically
+reasonable starting configuration.
+
+## Solver changes
+
+- solver iterations: 28
+- physics step: 1/120 second
+- up to 6 substeps
+- hard skeleton validation after every physics update, before visual synchronization
+
+## Debugging
+
+The Selected Orbsight panel now includes `Skeleton corrections`.
+If it stays at 0, the physical solver has remained anatomical.
+If it increases, the displayed reason tells which invariant was violated, such as:
+- hard joint stop
+- shell penetration
+- inter-leg merge
+
+That gives us a direct way to diagnose any remaining locomotion problem instead of guessing
+from the rendered model.
