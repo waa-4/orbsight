@@ -835,3 +835,50 @@ increases structured motor exploration instead of repeating the same mediocre st
 ## Persistence
 Body model, developmental stage, motor fragments, muscle strength, personality, memory,
 interests, world objects, and time scale continue to save in localStorage.
+
+
+# v0.9.1 — Sleep + Social + Smooth Legs
+
+## Teleport-yank fix
+v0.9 introduced two new sources of abrupt motor changes:
+- motor babbling jumped immediately to a new exploratory value
+- exploration bursts and generation replacement could suddenly swap controller behavior
+
+v0.9.1 smooths all three:
+- babble activation eases toward a target
+- exploration noise eases in/out
+- mutated/rejected motor policies become a target controller and blend in gradually
+
+The anatomy validator also no longer performs any positional leg reconstruction for finite joint
+angles. Finite bad poses are corrected continuously with softer angular/velocity forces.
+A direct leg reconstruction is now reserved for an invalid numerical joint state.
+
+## Mattresses and sleep
+The map has a rest area with three soft mattresses.
+
+When energy is low, an Orbsight can target a nearby mattress. Once close enough it can sleep:
+- motors relax
+- energy regenerates
+- grips release
+- the body becomes more damped and restful
+
+After a completed sleep, one current developmental skill receives a very small consolidation gain:
+balance, crawling, weight transfer, stepping, or walking. A successful motor fragment may also be
+lightly reinforced. Sleep is therefore useful but cannot instantly teach locomotion.
+
+## Thought bubbles
+Orbsights occasionally display their current internal thought above their shell.
+
+## Preset communication
+Nearby awake Orbsights can communicate using a large preset phrase library. Presets include:
+- general greetings / exploration
+- motor-learning observations
+- playful object comments
+- tired/rest messages
+- replies
+
+Messages are selected using context and personality (especially playfulness and sociability).
+Communication is intentionally preset-based; it is not generated language learning.
+
+## Persistence
+Sleep consolidation result and smooth target motor policy are included in saves.
