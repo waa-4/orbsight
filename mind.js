@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {nearby} from "./world.js";
-import {bodyPosition,bodyVelocity,createGrip,releaseGrip,updateGrips} from "./physics.js";
+import {bodyPosition,bodyVelocity,createGrip,createGroundGrip,releaseGrip,updateGrips} from "./physics.js";
 
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -45,7 +45,12 @@ export function attachMind(app,o){
     babble:{timer:0,leg:0,joint:"knee",value:0,target:0},
     command:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,{target:0,activation:0.1}]))),
     bubble:bubbleSprite(app),thoughtTimer:rand(5,11),chatTimer:rand(7,15),decisionTimer:0,
-    sleep:{sleeping:false,time:0,lastGain:"—",cooldown:0},calibration:{done:false,phase:"settling"}
+    sleep:{sleeping:false,time:0,lastGain:"—",cooldown:0},
+    calibration:{done:false,phase:"newborn"},
+    development:{
+      age:0,phase:"newborn flop",crawlingSkill:0,standingSkill:0,walkingSkill:0,
+      gripSkill:0,balanceSkill:0,lastContacts:0,lastGripTime:-999
+    }
   }
 }
 function smoothPolicy(m,dt){
@@ -112,127 +117,251 @@ function evaluate(o,app){
 }
 
 
-function bridgeCalibration(o,dt){
-  const m=o.mind,c=m.calibration;
-  const t=Math.max(0,o.age-2);
-  c.phase="mind-body calibration";
-  c.testLeg=Math.floor(t/1.2)%4;
-  const jointIndex=Math.floor((t%1.2)/0.24)%5;
-  c.testJoint=JOINTS[jointIndex];
-  const neutral={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
 
+function averageStrength(o){
+  let total=0,n=0;
+  for(const leg of o.legs)for(const j of JOINTS){total+=leg.muscle[j].strength;n++}
+  return total/Math.max(1,n)
+}
+function averageFatigue(o){
+  let total=0,n=0;
+  for(const leg of o.legs)for(const j of JOINTS){total+=leg.muscle[j].fatigue;n++}
+  return total/Math.max(1,n)
+}
+function developmentalPhase(o){
+  const m=o.mind,d=m.development,str=averageStrength(o);
+  if(o.age<5 || str<0.19)return "newborn flop";
+  if(str<0.30 || d.crawlingSkill<0.24)return "reach + crawl";
+  if(str<0.43 || d.standingSkill<0.26)return "supported crawl";
+  if(str<0.56 || d.balanceSkill<0.34)return "stand practice";
+  if(d.walkingSkill<0.42)return "first steps";
+  return "walking practice"
+}
+
+function updateDevelopment(o,dt){
+  const m=o.mind,d=m.development,p=bodyPosition(o),v=bodyVelocity(o);
+  d.age=o.age;d.phase=developmentalPhase(o);
+  const str=averageStrength(o),fat=averageFatigue(o);
+  const grips=o.legs.filter(l=>l.grip).length;
+  const horizontal=Math.hypot(v.x,v.z);
+
+  // Skills grow from successful experiences rather than a fixed timer.
+  if(grips>0 && horizontal>0.015)d.gripSkill=clamp(d.gripSkill+dt*0.010*grips,0,1);
+  if(o.contacts>=1 && horizontal>0.012)d.crawlingSkill=clamp(d.crawlingSkill+dt*0.0075,0,1);
+  if(o.contacts>=3 && o.upright>0.48)d.standingSkill=clamp(d.standingSkill+dt*0.0060,0,1);
+  if(o.upright>0.60 && o.contacts>=2)d.balanceSkill=clamp(d.balanceSkill+dt*0.0055,0,1);
+  if(horizontal>0.025 && o.upright>0.50 && o.contacts>=1)d.walkingSkill=clamp(d.walkingSkill+dt*0.0048,0,1);
+
+  m.stageName=d.phase;
+  if(d.phase==="newborn flop")m.stage=0;
+  else if(d.phase==="reach + crawl")m.stage=1;
+  else if(d.phase==="supported crawl")m.stage=2;
+  else if(d.phase==="stand practice")m.stage=3;
+  else if(d.phase==="first steps")m.stage=4;
+  else m.stage=5;
+
+  return{str,fat,grips,horizontal}
+}
+
+function weakBodyBabble(o,dt){
+  const m=o.mind,d=m.development;
+  // Slow random muscle twitches. Every leg can move independently.
+  m.babble.timer-=dt;
+  if(m.babble.timer<=0){
+    m.babble.timer=rand(0.45,1.25);
+    m.babble.leg=Math.floor(Math.random()*4);
+    m.babble.joint=JOINTS[Math.floor(Math.random()*JOINTS.length)];
+    m.babble.target=rand(-1,1);
+  }
+  m.babble.value=THREE.MathUtils.lerp(m.babble.value,m.babble.target,1-Math.exp(-dt*1.0));
+
+  const neutral={spread:0,hip:-0.06,knee:0.34,ankle:0.05,roll:0};
   for(let i=0;i<4;i++)for(const j of JOINTS){
-    m.command[i][j]={target:neutral[j],activation:0.42};
+    let target=neutral[j];
+    let activation=0.08;
+    if(i===m.babble.leg && j===m.babble.joint){
+      const amp={spread:0.15,hip:0.22,knee:0.28,ankle:0.17,roll:0.12}[j];
+      target+=m.babble.value*amp;
+      activation=0.35;
+    }
+    m.command[i][j]={target,activation};
   }
+}
 
-  const i=c.testLeg,j=c.testJoint,phase=(t%0.24)/0.24;
-  const amp={spread:0.24,hip:0.34,knee:0.46,ankle:0.28,roll:0.20}[j];
-  const sign=((Math.floor(t/0.24)&1)===0)?1:-1;
-  m.command[i][j]={target:neutral[j]+sign*amp*(0.55+0.45*Math.sin(phase*Math.PI)),activation:1};
+function crawlingCommands(o,dt){
+  const m=o.mind,d=m.development;
+  const neutral={spread:0,hip:-0.08,knee:0.28,ankle:0.05,roll:0};
+  const forwardPair=[0,1],rearPair=[2,3];
+  const t=o.age*0.75;
 
-  // Measure whether the body actually obeyed the previous command.
-  const now=o.legs[i].angles[j]||0;
-  const prev=o.bridge.measured[i][j]||0;
-  const moved=Math.abs(now-prev);
-  o.bridge.measured[i][j]=now;
+  for(let i=0;i<4;i++){
+    const leg=o.legs[i],phase=t+(i%2)*Math.PI+(i>=2?0.65:0);
+    // Crawl is intentionally messy: low-amplitude reaches and pulls.
+    const reach=Math.sin(phase);
+    const sideNoise=Math.sin(phase*0.71+i*1.4);
+    m.command[i].spread={target:sideNoise*0.10,activation:0.26};
+    m.command[i].hip={target:neutral.hip+reach*0.20,activation:0.38};
+    m.command[i].knee={target:neutral.knee+(reach>0?-0.08:0.18),activation:0.42};
+    m.command[i].ankle={target:neutral.ankle-reach*0.10,activation:0.30};
+    m.command[i].roll={target:sideNoise*0.06,activation:0.18};
 
-  // Self-tune muscle strength if a joint looks unresponsive.
-  if(moved<0.00018){
-    o.bridge.gains[i][j]=clamp(o.bridge.gains[i][j]+dt*0.55,1,3.2);
-  }else{
-    o.bridge.gains[i][j]=THREE.MathUtils.lerp(o.bridge.gains[i][j],1.15,dt*0.35);
+    if(leg.grip){
+      // A gripped foot becomes an anchor. Flexing hip+knee pulls the shell toward it.
+      m.command[i].hip.target=-0.30;
+      m.command[i].knee.target=0.52;
+      m.command[i].hip.activation=0.62;
+      m.command[i].knee.activation=0.68;
+      m.command[i].ankle.activation=0.42;
+    }
   }
-  const allGains=o.bridge.gains.flatMap(x=>JOINTS.map(jn=>x[jn]));
-  const maxGain=Math.max(...allGains);
-  o.bridge.health=maxGain>2.6?"boosting weak muscles":maxGain>1.45?"calibrating":"connected";
-  m.thought=`Connecting brain to leg ${i+1} ${j}.`;
-  return m.command
+}
+
+function standingCommands(o,dt){
+  const m=o.mind,d=m.development;
+  const t=o.age*0.55;
+  for(let i=0;i<4;i++){
+    const sway=Math.sin(t+i*Math.PI*0.5);
+    m.command[i].spread={target:sway*0.06,activation:0.36};
+    m.command[i].hip={target:-0.10+sway*0.08,activation:0.48};
+    m.command[i].knee={target:0.16+Math.abs(sway)*0.10,activation:0.55};
+    m.command[i].ankle={target:0.05-sway*0.05,activation:0.40};
+    m.command[i].roll={target:-sway*0.04,activation:0.28};
+  }
+}
+
+function stepCommands(o,dt){
+  const m=o.mind,d=m.development;
+  const t=o.age*(0.80+0.45*d.walkingSkill);
+  for(let i=0;i<4;i++){
+    // Diagonal pairs, but still deliberately imperfect and blended with learned policy later.
+    const phase=t+((i===0||i===3)?0:Math.PI);
+    const lift=Math.max(0,Math.sin(phase));
+    const push=Math.sin(phase);
+    m.command[i].spread={target:Math.sin(phase*0.5+i)*0.05,activation:0.42};
+    m.command[i].hip={target:-0.08+push*0.18,activation:0.54};
+    m.command[i].knee={target:0.14+lift*0.30,activation:0.60};
+    m.command[i].ankle={target:0.05-push*0.08,activation:0.46};
+    m.command[i].roll={target:0,activation:0.30};
+  }
+}
+
+function developmentalMotorPlan(o,dt){
+  const d=o.mind.development;
+  if(d.phase==="newborn flop"){weakBodyBabble(o,dt);return}
+  if(d.phase==="reach + crawl" || d.phase==="supported crawl"){crawlingCommands(o,dt);return}
+  if(d.phase==="stand practice"){standingCommands(o,dt);return}
+  stepCommands(o,dt)
 }
 
 function updateGripMind(app,o,dt){
-  const m=o.mind;
+  const m=o.mind,d=m.development;
   updateGrips(app.P,o,dt);
+  if(m.sleep.sleeping)return;
 
-  // Release grip if the mind wants to step away or if this leg has returned to ground support.
   for(const leg of o.legs){
-    if(leg.grip && (leg.contact || (m.target && m.target!==leg.grip.target && Math.random()<dt*0.4))){
-      releaseGrip(app.P,leg);
+    // Release after a pull or if the leg is stretched into an awkward posture.
+    if(leg.grip){
+      const hold=leg.grip.age;
+      if(hold>0.65+0.9*d.gripSkill && Math.random()<dt*(0.75-d.gripSkill*0.35)){
+        releaseGrip(app.P,leg);
+      }
+      continue;
     }
-  }
 
-  // Gripping is a learned/recovery action, not automatic glue.
-  if(o.age<8 || m.sleep.sleeping)return;
+    // Newborns mostly paw at the ground. Crawlers learn that anchoring a foot can move the body.
+    if(d.phase==="newborn flop"){
+      if(leg.contact && Math.random()<dt*0.10)createGroundGrip(app.P,o,leg);
+      continue;
+    }
 
-  const falling=o.shell.linvel().y<-0.45 || o.upright<0.35;
-  for(const leg of o.legs){
-    if(leg.grip || !leg.gripCandidate)continue;
-    const candidate=leg.gripCandidate.object;
-    const targetIsInteresting=(m.target===candidate);
-    const explore=m.stage>=2 && Math.random()<dt*(0.20+0.35*m.personality.curiosity);
-    if(falling || targetIsInteresting || explore){
-      if(createGrip(app.P,o,leg,candidate)){
-        m.thought=`Gripping ${candidate.type} with leg ${leg.index+1}.`;
-        if(Math.random()<0.35)showBubble(o,"Got a grip.",2.0);
+    // Ground grip for crawling.
+    if(leg.contact && Math.random()<dt*(0.22+0.60*d.gripSkill)){
+      if(createGroundGrip(app.P,o,leg)){
+        d.lastGripTime=app.simTime;
+        if(Math.random()<0.12)showBubble(o,"Hold... pull...",1.8);
+      }
+      continue;
+    }
+
+    // Raised surface gripping for climbing/pulling.
+    if(leg.gripCandidate){
+      const candidate=leg.gripCandidate.object;
+      const relevant=(m.target===candidate)||d.phase==="supported crawl"||d.phase==="reach + crawl";
+      if(relevant && Math.random()<dt*(0.16+0.52*d.gripSkill+m.personality.curiosity*0.18)){
+        if(createGrip(app.P,o,leg,candidate)){
+          d.lastGripTime=app.simTime;
+          m.thought=`Holding onto ${candidate.type} and trying to pull.`;
+        }
       }
     }
   }
 }
 
-function activeBodyExperiment(o,dt){
-  // Once connected, produce continual self-generated joint experiments.
-  // This is not a predefined gait: every leg/joint has its own oscillator phase,
-  // learned policy output, contact input, and body-model feedback.
-  const m=o.mind;
-  if(o.age<8 || m.sleep.sleeping)return;
-  const speed=0.55+0.55*m.policy.freq;
+function blendLearning(o,dt){
+  const m=o.mind,d=m.development;
+  // Learned policy is only a small modifier early. It gains authority as the animal matures.
+  const authority=clamp((averageStrength(o)-0.26)/0.48,0,0.55);
+  if(authority<=0)return;
+  smoothPolicy(m,dt);
   for(let i=0;i<4;i++){
-    const leg=o.legs[i];
-    const ph=m.phase[i]+o.age*speed+(i*1.37);
-    // Add small exploration that disappears as useful policies improve.
-    const exploreScale=m.stage<3?0.22:0.10;
-    m.command[i].hip.target+=Math.sin(ph*1.13)*exploreScale;
-    m.command[i].knee.target+=Math.sin(ph*1.41+0.8)*exploreScale*1.35;
-    m.command[i].ankle.target+=Math.sin(ph*1.73+1.6)*exploreScale*0.75;
-    m.command[i].spread.target+=Math.sin(ph*0.91+i)*exploreScale*0.55;
-    if(leg.grip){
-      // Pull against a grip by flexing the gripping leg while extending a supporting leg.
-      m.command[i].hip.target-=0.16;
-      m.command[i].knee.target+=0.18;
-      m.command[i].hip.activation=1;
-      m.command[i].knee.activation=1;
+    const leg=o.legs[i],ph=(m.phase[i]+=dt*m.policy.freq*Math.PI*2)+m.policy.phase[i];
+    for(const j of JOINTS){
+      const a=leg.angles[j]||0,e=m.model[i][j];
+      const f=[1,Math.sin(ph),Math.cos(ph),leg.contact?1:0,a,leg.load||0,e.forward,e.lift];
+      const out=policyOut(m.policy.legs[i][j],f,m.policy.gain);
+      const ranges={spread:0.09,hip:0.13,knee:0.16,ankle:0.10,roll:0.07};
+      m.command[i][j].target+=out*ranges[j]*authority;
+      m.command[i][j].activation=clamp(m.command[i][j].activation+Math.abs(out)*0.22*authority,0,1);
     }
   }
 }
 
+
 export function updateMind(app,o,dt){
-  const m=o.mind;m.energy=clamp(m.energy-(m.sleep.sleeping?0:dt*(0.0012+m.activity*0.0015)));m.hunger=clamp(m.hunger+dt*0.0025);
+  const m=o.mind;
+  m.energy=clamp(m.energy-(m.sleep.sleeping?0:dt*(0.0008+m.activity*0.0010)));
+  m.hunger=clamp(m.hunger+dt*0.0018);
   social(app,o,dt);sleep(app,o,dt);
 
-  if(o.settling){
-    m.calibration.phase="settling";
-    m.thought="Standing up and letting my new joints settle.";
-    const neutral={spread:0,hip:-0.10,knee:0.14,ankle:0.06,roll:0};
-    for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.72};
-    return m.command
-  }
-  if(o.age<8){
-    return bridgeCalibration(o,dt);
-  }else if(!m.calibration.done){
-    m.calibration.done=true;m.calibration.phase="learning";o.bridge.health="connected";
-    m.thought="My mind is connected to my body. Now I can experiment.";
-    showBubble(o,"Okay, my legs move. Time to experiment.",3.2);
-  }
-  if(m.sleep.sleeping){for(const leg of o.legs)releaseGrip(app.P,leg);
-    const neutral={spread:0,hip:-0.10,knee:0.20,ankle:0.06,roll:0};
-    for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:neutral[j],activation:0.08};
+  if(m.sleep.sleeping){
+    for(const leg of o.legs)releaseGrip(app.P,leg);
+    const rest={spread:0,hip:-0.04,knee:0.42,ankle:0.04,roll:0};
+    for(let i=0;i<4;i++)for(const j of JOINTS)m.command[i][j]={target:rest[j],activation:0.025};
+    m.thought="Sleeping and recovering muscle fatigue.";
+    for(const leg of o.legs)for(const j of JOINTS)leg.muscle[j].fatigue=clamp(leg.muscle[j].fatigue-dt*0.10,0,1);
     return m.command
   }
 
-  m.decisionTimer-=dt;if(m.decisionTimer<=0){m.decisionTimer=2.4+rand(0,2.8)+m.personality.patience*2;chooseTarget(app,o)}
-  if(m.target&&m.target.active){const p=bodyPosition(o),q=m.target.body.translation();m.desiredHeading=Math.atan2(q.x-p.x,q.z-p.z)}
-  learnBody(o,dt);updatePolicy(o,dt);activeBodyExperiment(o,dt);updateGripMind(app,o,dt);evaluate(o,app);
+  const dev=updateDevelopment(o,dt);
+  developmentalMotorPlan(o,dt);
+  updateGripMind(app,o,dt);
+
+  // Only mature animals add learned policy modulation.
+  if(m.stage>=2)blendLearning(o,dt);
+
+  m.decisionTimer-=dt;
+  if(m.decisionTimer<=0){
+    m.decisionTimer=3.0+rand(0,3.0)+m.personality.patience*1.5;
+    chooseTarget(app,o);
+  }
+
+  if(m.target&&m.target.active){
+    const p=bodyPosition(o),q=m.target.body.translation();
+    m.desiredHeading=Math.atan2(q.x-p.x,q.z-p.z);
+  }
+
+  learnBody(o,dt);
+  evaluate(o,app);
+
+  if(dev.str<0.24)m.thought="My muscles are weak. I am just figuring out what moves.";
+  else if(m.development.phase.includes("crawl"))m.thought="I am trying to grip, pull, and crawl.";
+  else if(m.development.phase==="stand practice")m.thought="I am trying to hold myself up.";
+  else if(m.development.phase==="first steps")m.thought="I am trying small steps.";
+  else m.thought="I am practicing walking.";
+
   return m.command
 }
+
 export function cleanupMind(app,o){
   if(!o.mind?.bubble)return;app.scene.remove(o.mind.bubble.sprite);o.mind.bubble.tex.dispose();o.mind.bubble.sprite.material.dispose()
 }

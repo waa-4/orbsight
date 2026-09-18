@@ -26,7 +26,7 @@ function qFromZ(angle){
   const h=angle/2;return Q(0,0,Math.sin(h),Math.cos(h));
 }
 function bodyDesc(pos,rot,lin=.08,ang=.14){
-  return RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x,pos.y,pos.z).setRotation(rot).setLinearDamping(lin).setAngularDamping(ang).setCanSleep(false);
+  return RAPIER.RigidBodyDesc.dynamic().setTranslation(pos.x,pos.y,pos.z).setRotation(rot).setLinearDamping(lin).setAngularDamping(ang).setCanSleep(false).setCcdEnabled(true);
 }
 function addDynamic(P,desc,colliderDesc){
   const b=P.world.createRigidBody(desc);P.world.createCollider(colliderDesc,b);return b
@@ -110,6 +110,17 @@ export function createOrbsightBody(P,scene,id,x=0,z=0){
       joints:{spread,hip:hipJ,knee:kneeJ,ankle:ankleJ,roll},
       angles:{spread:0,hip:0,knee:0,ankle:0,roll:0},
       contact:false,load:0,grip:null,gripCandidate:null,
+      muscle:{
+        spread:{strength:0.16,fatigue:0,use:0},
+        hip:{strength:0.18,fatigue:0,use:0},
+        knee:{strength:0.19,fatigue:0,use:0},
+        ankle:{strength:0.14,fatigue:0,use:0},
+        roll:{strength:0.11,fatigue:0,use:0}
+      },
+      smooth:{
+        spread:{target:0,activation:0},hip:{target:-0.10,activation:0},
+        knee:{target:0.20,activation:0},ankle:{target:0.06,activation:0},roll:{target:0,activation:0}
+      },
       commands:{...NEUTRAL}
     });
   });
@@ -166,20 +177,18 @@ export function updateBodySensors(o,objects){
 
 function applySupportReflex(o,commands){
   const p=o.shell.translation(),v=o.shell.linvel();
-  // Body-level spinal/vestibular reflex: only fights collapse, never selects heading.
-  const low=clamp((1.15-p.y)/0.28,0,1);
-  const falling=clamp((-v.y-0.08)/1.2,0,1);
+  const low=clamp((0.98-p.y)/0.34,0,1);
+  const falling=clamp((-v.y-0.18)/1.8,0,1);
   const need=Math.max(low,falling);
   if(need<=0)return;
+  // Reflex only adds a little extensor tone. A newborn is still allowed to flop.
   for(let i=0;i<o.legs.length;i++){
-    const leg=o.legs[i],c=commands[i];
-    c.spread.target=THREE.MathUtils.lerp(c.spread.target,0,need*0.35);
-    c.hip.target=THREE.MathUtils.lerp(c.hip.target,-0.12,need*0.72);
-    c.knee.target=THREE.MathUtils.lerp(c.knee.target,0.06,need*0.90);
-    c.ankle.target=THREE.MathUtils.lerp(c.ankle.target,0.04,need*0.70);
-    c.roll.target=THREE.MathUtils.lerp(c.roll.target,0,need*0.55);
+    const c=commands[i];
+    c.hip.target=THREE.MathUtils.lerp(c.hip.target,-0.10,need*0.18);
+    c.knee.target=THREE.MathUtils.lerp(c.knee.target,0.10,need*0.24);
+    c.ankle.target=THREE.MathUtils.lerp(c.ankle.target,0.05,need*0.18);
     for(const name of ["spread","hip","knee","ankle","roll"]){
-      c[name].activation=Math.max(c[name].activation,0.58+need*0.34);
+      c[name].activation=Math.max(c[name].activation,0.12+need*0.18);
     }
   }
 }
@@ -193,7 +202,7 @@ function worldAxis(body,axis){
 }
 function applyJointActuator(info,current,target,activation,dt){
   const err=target-current;
-  const impulse=clamp(err*activation*0.11,-0.018,0.018)*(dt*180);
+  const impulse=clamp(err*activation*0.045,-0.006,0.006)*(dt*180);
   if(Math.abs(impulse)<0.00001)return;
   const ax=worldAxis(info.bodyA,info.axisLocal);
   const t={x:ax.x*impulse,y:ax.y*impulse,z:ax.z*impulse};
@@ -210,11 +219,11 @@ function velocityActuator(info,current,target,activation,gain=1){
   // Direct angular-velocity muscle layer. This changes velocity, never position,
   // so Rapier's joints/limits remain authoritative.
   const err=target-current;
-  const desired=clamp(err*8.0,-4.0,4.0)*activation*gain;
+  const desired=clamp(err*3.6,-1.8,1.8)*activation*gain;
   const axis=worldAxis(info.bodyA,info.axisLocal);
   const avA=info.bodyA.angvel(),avB=info.bodyB.angvel();
   const rel=(avB.x-avA.x)*axis.x+(avB.y-avA.y)*axis.y+(avB.z-avA.z)*axis.z;
-  const delta=clamp(desired-rel,-0.34,0.34);
+  const delta=clamp(desired-rel,-0.10,0.10);
   const push=scaleVec(axis,delta*0.5);
   info.bodyA.setAngvel(subVec(avA,push),true);
   info.bodyB.setAngvel(addVec(avB,push),true);
@@ -243,6 +252,17 @@ export function createGrip(P,o,leg,target){
   return true
 }
 
+
+export function createGroundGrip(P,o,leg){
+  if(leg.grip || !leg.contact)return false;
+  const fp=leg.foot.translation();
+  const data=RAPIER.JointData.spherical({x:0,y:0,z:0},{x:fp.x,y:0.0,z:fp.z});
+  const joint=P.world.createImpulseJoint(data,leg.foot,P.ground,true);
+  joint.setContactsEnabled(false);
+  leg.grip={joint,target:null,ground:true,age:0,anchor:{x:fp.x,y:0,z:fp.z}};
+  return true
+}
+
 export function releaseGrip(P,leg){
   if(!leg.grip)return;
   try{P.world.removeImpulseJoint(leg.grip.joint,true)}catch{}
@@ -255,7 +275,7 @@ export function updateGrips(P,o,dt){
     leg.grip.age+=dt;
     const fp=leg.foot.translation(),a=leg.grip.anchor;
     const stretch=Math.hypot(fp.x-a.x,fp.y-a.y,fp.z-a.z);
-    if(stretch>0.48 || leg.grip.age>5.5 || !leg.grip.target.active)releaseGrip(P,leg);
+    if(stretch>0.42 || leg.grip.age>4.5 || (!leg.grip.ground && (!leg.grip.target || !leg.grip.target.active)))releaseGrip(P,leg);
   }
 }
 
@@ -265,19 +285,45 @@ export function driveBody(P,o,commands,dt){
   for(let i=0;i<o.legs.length;i++){
     const leg=o.legs[i],cmd=commands[i];
     for(const name of ["spread","hip","knee","ankle","roll"]){
-      const info=leg.joints[name],lim=JOINT_LIMITS[name],target=clamp(cmd[name].target,lim[0],lim[1]);
-      const activation=clamp(cmd[name].activation,0.02,1);
-      // Rapier's actual limit is the final authority. The brain can request a target, but cannot exceed it.
-      const stiffness=46+activation*74,damping=8.0+activation*10.0;
+      const info=leg.joints[name],lim=JOINT_LIMITS[name],mus=leg.muscle[name],sm=leg.smooth[name];
+      const rawTarget=clamp(cmd[name].target,lim[0],lim[1]);
+      const rawActivation=clamp(cmd[name].activation,0,1);
+
+      // Nervous-system smoothing: muscles cannot instantaneously jump to a new pose.
+      const targetAlpha=1-Math.exp(-dt*(2.1+mus.strength*2.2));
+      const actAlpha=1-Math.exp(-dt*3.1);
+      sm.target=THREE.MathUtils.lerp(sm.target,rawTarget,targetAlpha);
+      sm.activation=THREE.MathUtils.lerp(sm.activation,rawActivation,actAlpha);
+
+      // Biological strength: newborns are weak and floppy.
+      const freshness=clamp(1-mus.fatigue*0.72,0.28,1);
+      const effective=clamp(mus.strength*freshness,0.05,1);
+      const activation=sm.activation*effective;
       const current=leg.angles[name]||0;
-      const err=target-current;
-      const targetVel=clamp(err*7.5,-3.2,3.2);
-      info.joint.configureMotor(target,targetVel,stiffness,damping);
-      applyJointActuator(info,current,target,activation,dt);
+      const err=sm.target-current;
+
+      // Very compliant PD motor. Strength grows later instead of starting robotic/stiff.
+      const stiffness=2.0+effective*24+activation*16;
+      const damping=1.2+effective*5.5;
+      const targetVel=clamp(err*(2.1+effective*3.2),-1.35-effective*1.1,1.35+effective*1.1);
+      info.joint.configureMotor(sm.target,targetVel,stiffness,damping);
+
+      // Tiny physical muscle assists. These are deliberately weak at birth.
       const bridgeGain=(o.bridge?.gains?.[i]?.[name] ?? 1);
-      velocityActuator(info,current,target,activation,bridgeGain);
-      info.target=target;
-      activity+=Math.abs(err);
+      applyJointActuator(info,current,sm.target,activation*effective,dt);
+      velocityActuator(info,current,sm.target,activation,effective*(0.65+0.35*bridgeGain));
+
+      // Use-driven strengthening + fatigue + recovery.
+      const work=Math.min(1,Math.abs(err)*1.8+Math.abs(targetVel)*0.12)*sm.activation;
+      mus.use+=work*dt;
+      mus.fatigue=clamp(mus.fatigue+work*dt*0.050-dt*(0.018+0.018*(1-sm.activation)),0,1);
+      // Slow training; loaded legs strengthen a little faster.
+      const loadBonus=leg.load?0.55:0.12;
+      const train=work*(0.00030+loadBonus*0.00045);
+      mus.strength=clamp(mus.strength+train*dt*180,0.08,1.0);
+
+      info.target=sm.target;
+      activity+=Math.abs(err)*sm.activation;
     }
   }
   return clamp(activity/5)
@@ -285,16 +331,9 @@ export function driveBody(P,o,commands,dt){
 
 export function settleBody(P,o){
   for(const leg of o.legs){
-    const neutral={
-      spread:{target:0,activation:0.62},
-      hip:{target:-0.10,activation:0.72},
-      knee:{target:0.14,activation:0.78},
-      ankle:{target:0.06,activation:0.66},
-      roll:{target:0,activation:0.48}
-    };
-    for(const name of Object.keys(neutral)){
-      const n=neutral[name];
-      leg.joints[name].joint.configureMotor(n.target,0,62+n.activation*64,11.0+n.activation*6.0);
+    for(const name of ["spread","hip","knee","ankle","roll"]){
+      const n={spread:0,hip:-0.08,knee:0.24,ankle:0.05,roll:0}[name];
+      leg.joints[name].joint.configureMotor(n,0,3.0,1.8);
     }
   }
 }

@@ -1,6 +1,6 @@
-# Orbsight v0.14 — Mind–Body Bridge
+# Orbsight v0.15 — Developmental Locomotion
 
-Stable filenames remain:
+Stable filenames:
 - index.html
 - main.js
 - physics.js
@@ -8,65 +8,73 @@ Stable filenames remain:
 - world.js
 - README.md
 
-## Why this version exists
-The Rapier skeleton could exist without visibly acting alive. v0.14 makes the connection between
-mind and rigid body explicit instead of assuming that issuing a motor target is enough.
+## Goal
+Movement should develop more like an animal instead of starting as a stiff robot.
 
-## Explicit sensor → mind → actuator bridge
-Every step:
-1. physics.js measures each leg's spread/hip/knee/ankle/roll angles
-2. touch/contact and nearby grip surfaces are sensed
-3. mind.js creates individual joint commands
-4. physics.js sends those commands through three physical actuator layers:
-   - Rapier joint PD motor
-   - equal/opposite torque impulse
-   - equal/opposite angular-velocity muscle assist
-5. Rapier hard limits still prevent impossible joint rotation
+### 1. Newborn flop
+Orbsights begin with weak muscles (roughly 11–19% strength depending on the joint).
+They make slow, independent joint twitches and are allowed to flop around.
 
-No joint positions are teleported.
+### 2. Reach + crawl
+As muscles strengthen through actual use, the mind begins reaching with individual legs.
+Feet can physically grip the ground or nearby surfaces.
 
-## Self-calibrating muscles
-From 2–8 simulated seconds, the brain tests one leg/joint at a time.
-If a commanded joint barely changes angle, that joint's muscle gain is increased automatically.
-If it responds, the gain settles back toward normal.
+### 3. Supported crawl
+A gripped foot acts as an anchor. The Orbsight flexes its hip and knee against the anchor,
+physically pulling the shell toward it. Grip skill improves when this actually produces movement.
 
-Telemetry reports:
-- `Bridge: connecting / calibrating / boosting weak muscles / connected`
-- average muscle gain
-- motor activity
-- runtime status
+### 4. Stand practice
+Once muscles and crawling ability are stronger, the animal begins trying to support itself with
+multiple legs. Commands are still compliant and slightly wobbly.
 
-## Physical gripping
-Feet now sense nearby:
+### 5. First steps
+With enough strength and balance experience, diagonal leg pairs begin small stepping experiments.
+
+### 6. Walking practice
+The learned motor policy gets progressively more authority as the body matures.
+
+## Muscle system
+Every joint now has:
+- strength
+- fatigue
+- accumulated use
+- smoothed target
+- smoothed activation
+
+Strength grows slowly from successful muscle work, especially while the leg is loaded.
+Fatigue temporarily reduces effective strength. Sleeping restores fatigue faster.
+
+The motor is intentionally soft:
+- lower stiffness
+- lower target velocity
+- much weaker torque impulse
+- much weaker angular-velocity assist
+
+This removes the robotic jitter/stiffness from v0.14.
+
+## Grip system
+Feet can grip:
+- the ground
 - platforms
 - walls
 - pushable blocks
 - logs
 - planks
 
-When the mind chooses to grip, Rapier creates a spherical point joint from that foot to the
-surface/body. The foot may rotate around the grip point, so it behaves more like grasping than
-being welded in place.
+Grips are real Rapier spherical joints, not teleportation. They release after a pull, excessive
+stretch, sleep, or naturally as grip skill develops.
 
-Grips release when:
-- the leg returns to normal ground support
-- the grip is stretched too far
-- the mind moves on
-- the Orbsight sleeps
-- the grip exceeds its lifetime
+## Floor tunneling fix
+Moving body parts now use CCD (continuous collision detection), reducing the chance of a foot being
+driven through the floor at higher simulation speeds.
 
-A gripping leg deliberately pulls through its own hip/knee motors.
+## Learning
+Development is mostly success-gated rather than purely age-gated:
+- crawling skill grows from grounded horizontal motion
+- grip skill grows when anchored pulls create motion
+- standing skill grows from stable multi-foot support
+- balance grows while upright with support
+- walking skill grows from upright horizontal movement
 
-## Movement
-After calibration, each leg continues individual self-generated experimentation on top of the
-learned motor policy. This is not a predefined walking cycle: leg phases differ, sensory contact
-affects the policy, and each joint still has its own learned weights/body-model feedback.
-
-## Runtime resilience
-Eye movement happens before the physics step.
-Each Orbsight's mind/body step is guarded separately, so one subsystem error no longer freezes the
-whole visible scene. Any error is reported in the Events panel.
-
-## Proof of life
-The pupil scan is deliberately more obvious in v0.14. If the eye moves but a leg doesn't, the
-render loop is alive and the bridge telemetry tells us which actuator needs help.
+The evolutionary/learned motor policy is still present, but it has little authority when the animal
+is weak. It becomes a larger modifier only after the body develops.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orbsight v0.14 — Mind–Body Bridge</title>
+<title>Orbsight v0.15 — Developmental Locomotion</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Segoe UI,sans-serif;background:#0b1016;color:#edf2f7}
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#0b1016}
@@ -32,10 +32,10 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 </head>
 <body>
 <div id="app">
-  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.14…</div><div id="err" hidden></div></div>
+  <div id="view"><canvas id="c"></canvas><div id="status">starting v0.15…</div><div id="err" hidden></div></div>
   <aside id="side">
-    <h1>Orbsight <span>v0.14</span></h1>
-    <div class="small">Mind–body bridge: sensed joints, self-tuning muscles, physical foot grips, and Rapier hard joint limits. Stable filenames.</div>
+    <h1>Orbsight <span>v0.15</span></h1>
+    <div class="small">Weak newborn muscles, floppy body learning, physical gripping/crawling, gradual strengthening, standing, then walking. Stable filenames.</div>
 
     <div class="sec"><h3>Simulation</h3>
       <div class="buttons">
@@ -80,7 +80,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
       <span>Motor generation</span><b id="genT">—</b>
       <span>Dense reward</span><b id="rewardT">—</b>
       <span>Motor fragments</span><b id="fragmentsT">—</b>
-      <span>Settling</span><b id="settleT">—</b>
+      <span>Development</span><b id="settleT">—</b>
       <span>Joint engine</span><b id="engineT">Rapier hard limits</b>
       <span>Sleeping</span><b id="sleepT">—</b>
     </div></div>
@@ -92,7 +92,7 @@ label{font-size:11px;color:#9eb0c2;display:block}label input,label select{width:
 <script>
 (async()=>{
   const status=document.getElementById("status"),err=document.getElementById("err");
-  function fail(e){status.textContent="v0.14 failed to start";err.hidden=false;err.textContent=(e&&e.stack)?e.stack:String(e)}
+  function fail(e){status.textContent="v0.15 failed to start";err.hidden=false;err.textContent=(e&&e.stack)?e.stack:String(e)}
   window.addEventListener("error",e=>fail(e.error||e.message));
   window.addEventListener("unhandledrejection",e=>fail(e.reason));
   if(location.protocol==="file:"){fail("Run this through GitHub Pages / HTTP(S), not file://.");return}
