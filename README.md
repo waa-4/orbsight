@@ -168,3 +168,97 @@ The world autosaves every ~4 seconds and before page unload.
 Reloading the page automatically loads the saved world.
 
 For safety, loaded Orbsights are restored in an anatomy-safe upright pose at approximately their saved location instead of restoring a potentially mangled rigid-body limb pose from the exact previous physics frame.
+
+
+## v0.3.6 motor-revive patch
+
+The v0.3.5 anatomical safety system could accidentally make an Orbsight appear "dead."
+
+### Root cause fixed
+The previous safety math reduced motor speed toward zero as a joint approached its anatomical range.
+If several joints started near/outside those ranges at once, they could lose enough authority that the body could never recover.
+
+### Changes
+- joints now always retain at least 35% corrective authority
+- joints outside their safe range actively drive inward instead of freezing
+- anatomical limits are slightly more forgiving while still preventing backward knee inversion
+- muscle-relaxation state now reduces force less aggressively
+- motor output is visible in the selected-Orbsight panel
+- motor stall detection watches for high joint activity with near-zero physical movement
+- stalled bodies receive a temporary torque reserve
+- long stalls clear stale local jam/relaxation flags
+- anti-stall assistance never changes the creature's destination, gait phase, target object, or brain decision
+
+### Saves
+The save key remains `orbsight-v0.3.5-save` on purpose.
+Existing v0.3.5 Orbsights should load into v0.3.6 with their:
+- memories
+- personalities
+- interests
+- learned gait genomes
+- joint strengths
+- world objects
+
+The physical pose is still rebuilt into an anatomy-safe starting posture.
+
+
+# Orbsight v0.4 — Sensorimotor
+
+v0.4 combines motor-recovery work with two new body senses.
+
+## Vestibular system
+Each Orbsight now measures:
+- body tilt relative to gravity
+- angular speed
+- linear acceleration
+- whether it is falling
+- body-up direction
+
+The vestibular system does not choose actions. It is sensory input plus a low-level stabilizing reflex that can adjust damping and available muscle authority.
+
+## Proprioception
+Each Orbsight now receives internal body information:
+- hip spread angle
+- hip swing angle
+- knee angle
+- ankle angle
+- foot-roll angle
+- approximate limb angular speed
+- whether each foot is touching the ground
+- approximate load on each foot
+- load symmetry
+- current motor error
+
+This gives the motor learner information about what the body actually did rather than only what it commanded.
+
+## Developmental motor learning
+Motor learning now has six developmental stages:
+1. joint discovery
+2. balance
+3. standing
+4. stepping
+5. walking
+6. free locomotion
+
+The stage does not force an action or overwrite joint targets. It changes the reward used when judging a gait trial.
+
+For example:
+- joint discovery rewards controllable motor output
+- balance rewards upright, symmetric support
+- stepping rewards coordinated ground contact
+- walking begins rewarding real displacement
+
+## Motor-deadlock recovery
+The v0.3.6 anti-deadlock work is retained and strengthened:
+- newborn motor confidence starts higher
+- shell mass is reduced again
+- low-level torque reserve activates earlier
+- vestibular instability can increase available support force
+- passive damping rises during excessive spinning
+- normal brain-selected gait targets remain intact
+
+## Persistence
+The existing v0.3.5 save slot remains in use so previous saved Orbsights can migrate forward.
+v0.4 additionally saves developmental motor stage/progress.
+
+Exact transient sensor readings are recomputed from the current physical body instead of being persisted.
