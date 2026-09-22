@@ -4,7 +4,7 @@ import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,settleBody,
 import {setupWorld,addObject,resetMap,updateWorld} from "./world.js";
 import {attachMind,updateMind,cleanupMind,debugAction,encodeOrbsightBits,decodeOrbsightBits,applyOrbsightBits} from "./mind.js";
 
-const BUILD="0.17.1-debug-panel-fix-2026-09-22";
+const BUILD="0.17.2-floating-debug-window-2026-09-22";
 const $=id=>document.getElementById(id);
 $("status").textContent="loading Rapier physics…";
 
@@ -98,19 +98,56 @@ $("pause").onclick=e=>{app.paused=!app.paused;e.currentTarget.textContent=app.pa
 $("timeScale").onchange=e=>app.timeScale=Math.max(0.5,Math.min(15,Number(e.target.value)||1));
 $("addOrb").onclick=()=>addOrb();$("removeOrb").onclick=removeSelected;$("reset").onclick=reset;
 $("freecam").onclick=e=>{app.follow=!app.follow;e.currentTarget.textContent=app.follow?"Freecam":"Follow selected"};
+function centerDebugWindow(){
+  const panel=$("debugPanel");
+  panel.style.left="50%";panel.style.top="50%";panel.style.transform="translate(-50%,-50%)";
+}
 function setDebugOpen(open){
-  const panel=$("debugPanel"),button=$("toggleDebug");
-  panel.hidden=!open;
+  const panel=$("debugPanel"),button=$("toggleDebug"),backdrop=$("debugBackdrop");
+  panel.hidden=!open;backdrop.hidden=!open;
   button.setAttribute("aria-expanded",String(open));
   button.textContent=open?"Close Debug":"Debug Panel";
   if(open){
+    if(!panel.dataset.positioned){centerDebugWindow();panel.dataset.positioned="1"}
     refreshBinary();
-    setDebugMsg("Debug Panel opened for the selected Orbsight.");
-    requestAnimationFrame(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}));
+    setDebugMsg("Floating Debug Panel opened. Drag the title bar; resize from the bottom-right corner.");
+    panel.focus?.();
   }
 }
 $("toggleDebug").onclick=()=>setDebugOpen($("debugPanel").hidden);
 $("closeDebug").onclick=()=>setDebugOpen(false);
+$("centerDebug").onclick=centerDebugWindow;
+
+{
+  const panel=$("debugPanel"),handle=$("debugDragHandle");
+  let drag=null;
+  handle.addEventListener("pointerdown",e=>{
+    if(e.target.closest("button"))return;
+    const r=panel.getBoundingClientRect();
+    // Remove centering transform before pixel-based dragging.
+    panel.style.transform="none";
+    panel.style.left=r.left+"px";panel.style.top=r.top+"px";
+    drag={id:e.pointerId,dx:e.clientX-r.left,dy:e.clientY-r.top};
+    handle.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  handle.addEventListener("pointermove",e=>{
+    if(!drag||e.pointerId!==drag.id)return;
+    const maxX=Math.max(0,window.innerWidth-panel.offsetWidth);
+    const maxY=Math.max(0,window.innerHeight-panel.offsetHeight);
+    const x=Math.max(0,Math.min(maxX,e.clientX-drag.dx));
+    const y=Math.max(0,Math.min(maxY,e.clientY-drag.dy));
+    panel.style.left=x+"px";panel.style.top=y+"px";
+  });
+  const end=e=>{if(drag&&e.pointerId===drag.id){drag=null;try{handle.releasePointerCapture(e.pointerId)}catch{}}};
+  handle.addEventListener("pointerup",end);handle.addEventListener("pointercancel",end);
+
+  window.addEventListener("resize",()=>{
+    if(panel.hidden)return;
+    const r=panel.getBoundingClientRect();
+    if(r.right<80||r.bottom<60||r.left>window.innerWidth-80||r.top>window.innerHeight-40)centerDebugWindow();
+  });
+}
 $("debugPanel").addEventListener("click",e=>{
   const b=e.target.closest("[data-debug]");if(!b)return;
   const o=selectedOrMessage();if(!o)return;
@@ -125,10 +162,10 @@ $("orbFile").onchange=async e=>{const f=e.target.files?.[0];if(f)await loadOrbFi
 $("addObject").onclick=()=>addObject(app,$("objectType").value,Number($("objX").value)||0,Number($("objZ").value)||0,1);
 $("randomObject").onclick=()=>addObject(app,$("objectType").value,(Math.random()-0.5)*55,(Math.random()-0.5)*55,1);
 window.addEventListener("keydown",e=>{if(["KeyW","KeyA","KeyS","KeyD","KeyQ","KeyE"].includes(e.code))app.freeKeys.add(e.code);if(e.code==="KeyF"){app.follow=!app.follow;$("freecam").textContent=app.follow?"Freecam":"Follow selected"}});
-window.addEventListener("keyup",e=>app.freeKeys.delete(e.code));
+window.addEventListener("keyup",e=>app.freeKeys.delete(e.code));window.addEventListener("keydown",e=>{if(e.code==="Escape"&&!$("debugPanel").hidden)setDebugOpen(false)});
 function updateFreecam(dt){if(app.follow)return;const speed=7*dt,f=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),r=new THREE.Vector3(),m=new THREE.Vector3();camera.getWorldDirection(f);f.y=0;if(f.lengthSq())f.normalize();r.crossVectors(f,up).normalize();if(app.freeKeys.has("KeyW"))m.add(f);if(app.freeKeys.has("KeyS"))m.sub(f);if(app.freeKeys.has("KeyD"))m.add(r);if(app.freeKeys.has("KeyA"))m.sub(r);if(app.freeKeys.has("KeyE"))m.y+=1;if(app.freeKeys.has("KeyQ"))m.y-=1;if(m.lengthSq()){m.normalize().multiplyScalar(speed);camera.position.add(m);controls.target.add(m)}}
 
-reset();$("status").textContent="v0.17.1 debug panel fix running";
+reset();$("status").textContent="v0.17.2 floating debug window running";
 const clock=new THREE.Clock(),FIXED=1/180;let acc=0,uiTimer=0;
 function frame(){
   requestAnimationFrame(frame);const realDt=Math.min(0.05,clock.getDelta());resize();

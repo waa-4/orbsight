@@ -100,3 +100,24 @@ v0.17.1 fixes that by:
 
 No movement, binary `.orb`, or learning data format changed.
 Stable filenames remain unchanged.
+
+
+## v0.17.2 Floating Debug Window
+
+The Debug Panel is no longer part of the sidebar layout.
+
+Clicking `Debug Panel` now opens a desktop-style floating window centered over the simulation.
+
+Features:
+- always initially centered on screen
+- high z-index above the Three.js canvas and sidebar
+- draggable by its title bar
+- resizable using the browser resize handle in the bottom-right corner
+- minimum and maximum sizes prevent it from disappearing
+- `Center` button restores it to the middle
+- `Close` button and Escape close it
+- position is kept while it remains open/closed during the session
+- window-edge safety recenters it after browser resizing if it ends up mostly offscreen
+
+All v0.17 binary `.orb` and 40+ debug controls are unchanged.
+Stable repo filenames are unchanged.
