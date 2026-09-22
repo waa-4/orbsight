@@ -4,7 +4,7 @@ import {createPhysics,createOrbsightBody,updateBodySensors,driveBody,settleBody,
 import {setupWorld,addObject,resetMap,updateWorld} from "./world.js";
 import {attachMind,updateMind,cleanupMind,debugAction,encodeOrbsightBits,decodeOrbsightBits,applyOrbsightBits} from "./mind.js";
 
-const BUILD="0.17-debug-binary-2026-09-22";
+const BUILD="0.17.1-debug-panel-fix-2026-09-22";
 const $=id=>document.getElementById(id);
 $("status").textContent="loading Rapier physics…";
 
@@ -98,7 +98,19 @@ $("pause").onclick=e=>{app.paused=!app.paused;e.currentTarget.textContent=app.pa
 $("timeScale").onchange=e=>app.timeScale=Math.max(0.5,Math.min(15,Number(e.target.value)||1));
 $("addOrb").onclick=()=>addOrb();$("removeOrb").onclick=removeSelected;$("reset").onclick=reset;
 $("freecam").onclick=e=>{app.follow=!app.follow;e.currentTarget.textContent=app.follow?"Freecam":"Follow selected"};
-$("toggleDebug").onclick=()=>{$("debugPanel").hidden=!$("debugPanel").hidden;if(!$("debugPanel").hidden)refreshBinary()};
+function setDebugOpen(open){
+  const panel=$("debugPanel"),button=$("toggleDebug");
+  panel.hidden=!open;
+  button.setAttribute("aria-expanded",String(open));
+  button.textContent=open?"Close Debug":"Debug Panel";
+  if(open){
+    refreshBinary();
+    setDebugMsg("Debug Panel opened for the selected Orbsight.");
+    requestAnimationFrame(()=>panel.scrollIntoView({behavior:"smooth",block:"start"}));
+  }
+}
+$("toggleDebug").onclick=()=>setDebugOpen($("debugPanel").hidden);
+$("closeDebug").onclick=()=>setDebugOpen(false);
 $("debugPanel").addEventListener("click",e=>{
   const b=e.target.closest("[data-debug]");if(!b)return;
   const o=selectedOrMessage();if(!o)return;
@@ -116,7 +128,7 @@ window.addEventListener("keydown",e=>{if(["KeyW","KeyA","KeyS","KeyD","KeyQ","Ke
 window.addEventListener("keyup",e=>app.freeKeys.delete(e.code));
 function updateFreecam(dt){if(app.follow)return;const speed=7*dt,f=new THREE.Vector3(),up=new THREE.Vector3(0,1,0),r=new THREE.Vector3(),m=new THREE.Vector3();camera.getWorldDirection(f);f.y=0;if(f.lengthSq())f.normalize();r.crossVectors(f,up).normalize();if(app.freeKeys.has("KeyW"))m.add(f);if(app.freeKeys.has("KeyS"))m.sub(f);if(app.freeKeys.has("KeyD"))m.add(r);if(app.freeKeys.has("KeyA"))m.sub(r);if(app.freeKeys.has("KeyE"))m.y+=1;if(app.freeKeys.has("KeyQ"))m.y-=1;if(m.lengthSq()){m.normalize().multiplyScalar(speed);camera.position.add(m);controls.target.add(m)}}
 
-reset();$("status").textContent="v0.17 debug + binary Orbsights running";
+reset();$("status").textContent="v0.17.1 debug panel fix running";
 const clock=new THREE.Clock(),FIXED=1/180;let acc=0,uiTimer=0;
 function frame(){
   requestAnimationFrame(frame);const realDt=Math.min(0.05,clock.getDelta());resize();

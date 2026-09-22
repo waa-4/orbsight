@@ -82,3 +82,21 @@ Invalid magic/version or incomplete bytes are rejected instead of corrupting the
 
 This means an Orbsight is now portable as a compact binary-state creature file rather than only
 existing inside the running page.
+
+
+## v0.17.1 Debug Panel visibility fix
+
+The v0.17 Debug Panel was placed at the very bottom of the scrollable sidebar. The toggle could
+open it without changing anything visible near the button, which made it look like the button did
+nothing.
+
+v0.17.1 fixes that by:
+- moving the Debug Panel directly under Simulation
+- auto-scrolling the opened panel into view
+- changing the button label to `Close Debug`
+- adding a Close button inside the panel
+- adding `aria-expanded`
+- writing a visible Debug Panel opened message
+
+No movement, binary `.orb`, or learning data format changed.
+Stable filenames remain unchanged.
