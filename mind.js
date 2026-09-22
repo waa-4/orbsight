@@ -73,6 +73,10 @@ export function attachMind(app,o){
     development:{
       phase:"newborn motor discovery",bodyMap:0,crawlSkill:0,gripSkill:0,supportSkill:0,
       balanceSkill:0,stepSkill:0,walkSkill:0,successfulPulls:0,successfulPlants:0
+    },
+    debug:{
+      freezeBrain:false,forcePhase:null,forceLegStates:null,forceLegUntil:0,
+      walkTutor:0,crawlTutor:0,lastAction:"none"
     }
   }
 }
@@ -120,7 +124,8 @@ function avgFatigue(o){
 }
 
 function phaseFor(o){
-  const d=o.mind.development,s=avgStrength(o);
+  const m=o.mind,d=m.development,s=avgStrength(o);
+  if(m.debug && m.debug.forcePhase)return m.debug.forcePhase;
   if(d.bodyMap<0.22 || s<0.19)return "newborn motor discovery";
   if(d.crawlSkill<0.24 || s<0.26)return "reach + plant";
   if(d.gripSkill<0.28 || d.crawlSkill<0.42)return "grip + pull crawling";
@@ -169,6 +174,27 @@ function primitiveTargets(o,i,state){
 function choosePrimitive(o,i){
   const m=o.mind,d=m.development,leg=o.legs[i],lb=m.legs[i];
   const phase=d.phase;
+
+  if(m.debug?.forceLegStates && o.age < m.debug.forceLegUntil){
+    return m.debug.forceLegStates[i] || "relax";
+  }
+
+  // Temporary debug tutors demonstrate useful whole-leg sequences.
+  if(m.debug?.walkTutor>0){
+    const beat=Math.floor(o.age*2.2)%4;
+    const diagonalA=(i===0||i===3), swingA=(beat===0||beat===1);
+    const swing=diagonalA?swingA:!swingA;
+    if(swing)return leg.contact?"lift":"plant";
+    return leg.contact?"push":"plant";
+  }
+  if(m.debug?.crawlTutor>0){
+    const beat=Math.floor(o.age*1.6+i)%4;
+    if(leg.grip)return "pull";
+    if(beat===0)return "reach";
+    if(beat===1)return "plant";
+    if(beat===2&&leg.contact)return "push";
+    return "relax";
+  }
 
   // No oscillators. A leg chooses one discrete biological action, completes it, then changes.
   if(phase==="newborn motor discovery"){
@@ -391,6 +417,14 @@ function evaluate(o,app){
 
 export function updateMind(app,o,dt){
   const m=o.mind;
+  if(m.debug){
+    m.debug.walkTutor=Math.max(0,m.debug.walkTutor-dt);
+    m.debug.crawlTutor=Math.max(0,m.debug.crawlTutor-dt);
+    if(m.debug.freezeBrain){
+      m.thought="Debug: brain frozen.";
+      return m.command;
+    }
+  }
   m.energy=clamp(m.energy-(m.sleep.sleeping?0:dt*(0.00065+m.activity*0.00065)));
   m.hunger=clamp(m.hunger+dt*0.0015);
   social(app,o,dt);sleep(app,o,dt);
@@ -429,6 +463,213 @@ export function updateMind(app,o,dt){
   else m.thought="Trying to make my steps smoother.";
 
   return m.command
+}
+
+
+const DEV_PHASES=[
+  "newborn motor discovery","reach + plant","grip + pull crawling",
+  "supported crawling","standing practice","first steps","walking practice"
+];
+const LEG_STATES=["relax","reach","plant","pull","push","lift"];
+const MAGIC=[79,82,66,17]; // "ORB" + format 17, stored as bits in the file.
+
+function q8(v,min=0,max=1){return Math.round(clamp((v-min)/(max-min),0,1)*255)}
+function uq8(v,min=0,max=1){return min+(v/255)*(max-min)}
+function s8(v,range=1){return Math.round(clamp(v/range,-1,1)*127)&255}
+function us8(v,range=1){const n=v>127?v-256:v;return (n/127)*range}
+function u16(v){v=Math.max(0,Math.min(65535,Math.round(v)));return[(v>>8)&255,v&255]}
+function i16(v){v=Math.max(-32768,Math.min(32767,Math.round(v)));if(v<0)v+=65536;return[(v>>8)&255,v&255]}
+function readU16(a,i){return(a[i]<<8)|a[i+1]}
+function readI16(a,i){let v=readU16(a,i);return v>32767?v-65536:v}
+function clonePolicyShape(p){return JSON.parse(JSON.stringify(p))}
+
+export function debugAction(app,o,action){
+  if(!o)return "No selected Orbsight.";
+  const m=o.mind,d=m.development;
+  const muscles=()=>o.legs.flatMap(l=>JOINTS.map(j=>l.muscle[j]));
+  const setStrength=v=>muscles().forEach(x=>x.strength=clamp(v,0.07,1));
+  const addStrength=v=>muscles().forEach(x=>x.strength=clamp(x.strength+v,0.07,1));
+  const setFatigue=v=>muscles().forEach(x=>x.fatigue=clamp(v,0,1));
+  const forceAll=state=>{m.debug.forceLegStates=[state,state,state,state];m.debug.forceLegUntil=o.age+3};
+
+  switch(action){
+    case "teach-walk":
+      Object.assign(d,{bodyMap:.95,crawlSkill:.92,gripSkill:.82,supportSkill:.88,balanceSkill:.86,stepSkill:.78,walkSkill:.48});
+      setStrength(.72);setFatigue(0);m.debug.walkTutor=30;m.debug.forcePhase="walking practice";m.thought="Debug tutor: practicing walking.";break;
+    case "teach-crawl":
+      Object.assign(d,{bodyMap:.75,crawlSkill:.52,gripSkill:.40,supportSkill:.34,balanceSkill:.18,stepSkill:.05,walkSkill:0});
+      setStrength(.36);setFatigue(0);m.debug.crawlTutor=30;m.debug.forcePhase="grip + pull crawling";m.thought="Debug tutor: practicing crawling.";break;
+    case "teach-grip": d.gripSkill=.95;d.crawlSkill=Math.max(d.crawlSkill,.45);break;
+    case "teach-stand":
+      Object.assign(d,{bodyMap:.88,crawlSkill:.70,gripSkill:.65,supportSkill:.82,balanceSkill:.62,stepSkill:.12});
+      setStrength(.58);m.debug.forcePhase="standing practice";break;
+    case "teach-balance": d.balanceSkill=.95;d.supportSkill=Math.max(d.supportSkill,.85);break;
+    case "max-skills":
+      ["bodyMap","crawlSkill","gripSkill","supportSkill","balanceSkill","stepSkill","walkSkill"].forEach(k=>d[k]=1);break;
+    case "reset-learning":
+      Object.assign(d,{bodyMap:0,crawlSkill:0,gripSkill:0,supportSkill:0,balanceSkill:0,stepSkill:0,walkSkill:0,successfulPulls:0,successfulPlants:0});
+      setStrength(.14);setFatigue(0);m.generation=1;m.bestScore=-999;m.targetPolicy=clonePolicyShape(m.policy);m.best=clonePolicyShape(m.policy);
+      for(const lb of m.legs){lb.success=0;lb.failed=0;for(const k of Object.keys(lb.primitiveMemory))lb.primitiveMemory[k]=0}
+      m.debug.forcePhase=null;m.debug.walkTutor=0;m.debug.crawlTutor=0;break;
+    case "strength-plus": addStrength(.10);break;
+    case "strength-minus": addStrength(-.10);break;
+    case "strength-max": setStrength(1);break;
+    case "strength-newborn": setStrength(.14);break;
+    case "fatigue-clear": setFatigue(0);break;
+    case "fatigue-max": setFatigue(1);break;
+    case "energy-full": m.energy=1;break;
+    case "energy-low": m.energy=.15;break;
+    case "hunger-clear": m.hunger=0;break;
+    case "hunger-high": m.hunger=1;break;
+    case "sleep": m.sleep.sleeping=true;m.sleep.time=0;break;
+    case "wake": m.sleep.sleeping=false;m.sleep.cooldown=4;break;
+    case "relax-all": forceAll("relax");break;
+    case "plant-all": forceAll("plant");break;
+    case "lift-all": forceAll("lift");break;
+    case "push-all": forceAll("push");break;
+    case "pull-all": forceAll("pull");break;
+    case "reach-1": m.debug.forceLegStates=["reach","relax","relax","relax"];m.debug.forceLegUntil=o.age+3;break;
+    case "reach-2": m.debug.forceLegStates=["relax","reach","relax","relax"];m.debug.forceLegUntil=o.age+3;break;
+    case "reach-3": m.debug.forceLegStates=["relax","relax","reach","relax"];m.debug.forceLegUntil=o.age+3;break;
+    case "reach-4": m.debug.forceLegStates=["relax","relax","relax","reach"];m.debug.forceLegUntil=o.age+3;break;
+    case "grip-ground":
+      for(const leg of o.legs)if(leg.contact&&!leg.grip)createGroundGrip(app.P,o,leg);break;
+    case "release-grips": for(const leg of o.legs)releaseGrip(app.P,leg);break;
+    case "stop-body":
+      for(const part of o.parts){part.body.setLinvel({x:0,y:0,z:0},true);part.body.setAngvel({x:0,y:0,z:0},true)}break;
+    case "nudge-forward": {
+      const v=o.shell.linvel();o.shell.setLinvel({x:v.x,y:v.y,z:v.z-1.2},true);break;
+    }
+    case "nudge-up": {
+      const v=o.shell.linvel();o.shell.setLinvel({x:v.x,y:Math.max(v.y,1.7),z:v.z},true);break;
+    }
+    case "curiosity-max": m.personality.curiosity=1;break;
+    case "patience-max": m.personality.patience=1;break;
+    case "sociability-max": m.personality.sociability=1;break;
+    case "playfulness-max": m.personality.playfulness=1;break;
+    case "personality-random":
+      for(const k of Object.keys(m.personality))m.personality[k]=rand(.05,.98);break;
+    case "generation-plus": m.generation+=50;break;
+    case "freeze-brain": m.debug.freezeBrain=!m.debug.freezeBrain;break;
+    case "phase-auto": m.debug.forcePhase=null;break;
+    case "phase-newborn": m.debug.forcePhase=DEV_PHASES[0];break;
+    case "phase-reach": m.debug.forcePhase=DEV_PHASES[1];break;
+    case "phase-crawl": m.debug.forcePhase=DEV_PHASES[2];break;
+    case "phase-supported": m.debug.forcePhase=DEV_PHASES[3];break;
+    case "phase-stand": m.debug.forcePhase=DEV_PHASES[4];break;
+    case "phase-steps": m.debug.forcePhase=DEV_PHASES[5];break;
+    case "phase-walk": m.debug.forcePhase=DEV_PHASES[6];break;
+    case "random-policy":
+      m.policy=seedPolicy();m.targetPolicy=clonePolicyShape(m.policy);m.best=clonePolicyShape(m.policy);m.bestScore=-999;break;
+    default:return `Unknown debug action: ${action}`;
+  }
+  m.debug.lastAction=action;
+  return `Applied ${action} to ${m.name}.`;
+}
+
+export function encodeOrbsightBits(o){
+  const m=o.mind,d=m.development,b=[];
+  b.push(...MAGIC);
+
+  // Name: fixed 16 ASCII bytes. Everything in the .orb is still represented as 0/1 bits.
+  const name=(m.name||"Orbsight").slice(0,16);
+  for(let i=0;i<16;i++)b.push(i<name.length?name.charCodeAt(i)&255:0);
+
+  b.push(...u16(o.id),...u16(o.age*10),q8(m.energy),q8(m.hunger));
+  b.push(q8(m.personality.curiosity),q8(m.personality.patience),q8(m.personality.playfulness),q8(m.personality.sociability));
+  b.push(...u16(m.generation),...i16(m.bestScore*100));
+  b.push(Math.max(0,DEV_PHASES.indexOf(d.phase)));
+  for(const k of ["bodyMap","crawlSkill","gripSkill","supportSkill","balanceSkill","stepSkill","walkSkill"])b.push(q8(d[k]));
+  b.push(...u16(d.successfulPulls),...u16(d.successfulPlants));
+  b.push(q8(m.policy.freq,0,1.5),q8(m.policy.gain,0,1));
+
+  for(let i=0;i<4;i++)b.push(...i16((m.phase[i]||0)*1000));
+
+  // Current learned policy weights.
+  for(let i=0;i<4;i++)for(const j of JOINTS)for(let k=0;k<FEATURES;k++)b.push(s8(m.policy.legs[i][j][k],1.6));
+
+  // Primitive memories + current leg state.
+  for(let i=0;i<4;i++){
+    const lb=m.legs[i];
+    b.push(Math.max(0,LEG_STATES.indexOf(lb.state)),s8(lb.reachBias,.2));
+    b.push(...u16(lb.success),...u16(lb.failed));
+    for(const k of ["reach","plant","pull","push","lift"])b.push(q8(lb.primitiveMemory[k]));
+  }
+
+  // Muscle strength + fatigue for all 20 joints.
+  for(const leg of o.legs)for(const j of JOINTS)b.push(q8(leg.muscle[j].strength),q8(leg.muscle[j].fatigue));
+
+  // Learned body model.
+  for(let i=0;i<4;i++)for(const j of JOINTS){
+    const e=m.model[i][j];
+    b.push(s8(e.forward,1),s8(e.lift,1),s8(e.support,1),...u16(e.samples));
+  }
+
+  const groups=b.map(v=>(v&255).toString(2).padStart(8,"0"));
+  const lines=[];for(let i=0;i<groups.length;i+=16)lines.push(groups.slice(i,i+16).join(" "));
+  return lines.join("\n");
+}
+
+export function decodeOrbsightBits(text){
+  const bits=String(text).replace(/[^01]/g,"");
+  if(bits.length%8!==0)throw new Error("Binary Orbsight file has an incomplete 8-bit group.");
+  const a=[];for(let i=0;i<bits.length;i+=8)a.push(parseInt(bits.slice(i,i+8),2));
+  if(a.length<40)throw new Error("Binary Orbsight file is too short.");
+  if(MAGIC.some((v,i)=>a[i]!==v))throw new Error("Not an Orbsight binary file or unsupported version.");
+
+  let p=4;
+  let name="";for(let i=0;i<16;i++){const c=a[p++];if(c)name+=String.fromCharCode(c)}
+  const data={
+    name,id:readU16(a,p),age:readU16(a,p+2)/10,energy:a[p+4]/255,hunger:a[p+5]/255,
+    personality:{curiosity:a[p+6]/255,patience:a[p+7]/255,playfulness:a[p+8]/255,sociability:a[p+9]/255}
+  };
+  p+=10;
+  data.generation=readU16(a,p);p+=2;
+  data.bestScore=readI16(a,p)/100;p+=2;
+  data.phaseName=DEV_PHASES[a[p++]]||DEV_PHASES[0];
+  data.skills={};for(const k of ["bodyMap","crawlSkill","gripSkill","supportSkill","balanceSkill","stepSkill","walkSkill"])data.skills[k]=a[p++]/255;
+  data.successfulPulls=readU16(a,p);p+=2;data.successfulPlants=readU16(a,p);p+=2;
+  data.policy={freq:uq8(a[p++],0,1.5),gain:uq8(a[p++],0,1),phase:[],legs:Array.from({length:4},()=>Object.fromEntries(JOINTS.map(j=>[j,Array(FEATURES).fill(0)])))};
+  for(let i=0;i<4;i++){data.policy.phase[i]=readI16(a,p)/1000;p+=2}
+  for(let i=0;i<4;i++)for(const j of JOINTS)for(let k=0;k<FEATURES;k++)data.policy.legs[i][j][k]=us8(a[p++],1.6);
+
+  data.legs=[];
+  for(let i=0;i<4;i++){
+    const state=LEG_STATES[a[p++]]||"relax",reachBias=us8(a[p++],.2),success=readU16(a,p);p+=2;const failed=readU16(a,p);p+=2;
+    const primitiveMemory={};for(const k of ["reach","plant","pull","push","lift"])primitiveMemory[k]=a[p++]/255;
+    data.legs.push({state,reachBias,success,failed,primitiveMemory});
+  }
+
+  data.muscles=Array.from({length:4},()=>({}));
+  for(let i=0;i<4;i++)for(const j of JOINTS)data.muscles[i][j]={strength:a[p++]/255,fatigue:a[p++]/255};
+
+  data.model=Array.from({length:4},()=>({}));
+  for(let i=0;i<4;i++)for(const j of JOINTS){
+    data.model[i][j]={forward:us8(a[p++],1),lift:us8(a[p++],1),support:us8(a[p++],1),samples:readU16(a,p)};p+=2;
+  }
+  data.byteLength=a.length;
+  return data;
+}
+
+export function applyOrbsightBits(o,text){
+  const data=decodeOrbsightBits(text),m=o.mind,d=m.development;
+  m.name=data.name||m.name;o.age=data.age;m.energy=data.energy;m.hunger=data.hunger;
+  Object.assign(m.personality,data.personality);
+  m.generation=data.generation;m.bestScore=data.bestScore;
+  Object.assign(d,data.skills,{phase:data.phaseName,successfulPulls:data.successfulPulls,successfulPlants:data.successfulPlants});
+  m.policy=data.policy;m.targetPolicy=clonePolicyShape(data.policy);m.best=clonePolicyShape(data.policy);
+  m.phase=[...data.policy.phase];
+  for(let i=0;i<4;i++){
+    Object.assign(m.legs[i],data.legs[i]);
+    for(const j of JOINTS){
+      o.legs[i].muscle[j].strength=clamp(data.muscles[i][j].strength,.07,1);
+      o.legs[i].muscle[j].fatigue=clamp(data.muscles[i][j].fatigue,0,1);
+      Object.assign(m.model[i][j],data.model[i][j]);
+    }
+  }
+  m.debug.forcePhase=null;m.debug.walkTutor=0;m.debug.crawlTutor=0;m.debug.freezeBrain=false;
+  m.thought="Loaded my mind/body data from a binary Orbsight file.";
+  return data;
 }
 
 export function cleanupMind(app,o){

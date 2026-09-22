@@ -1,6 +1,6 @@
-# Orbsight v0.16 — Neuromuscular Movement Remake
+# Orbsight v0.17 — Debug Panel + Binary Orbsight Files
 
-Stable filenames:
+Stable engine filenames are STILL unchanged:
 - index.html
 - main.js
 - physics.js
@@ -8,89 +8,77 @@ Stable filenames:
 - world.js
 - README.md
 
-## Why this is a remake
-v0.15 still let the newborn controller continuously wave individual joints around like an
-inflatable tube. v0.16 removes that control style.
+## Debug Panel
 
-There is NO continuous newborn oscillator driving every joint.
+The new Debug Panel always edits only the selected Orbsight.
 
-## New architecture
+It contains more than 40 controls, including:
+- walking tutor
+- crawling tutor
+- grip / stand / balance teaching
+- max/reset learning
+- muscle strength +/- / max / newborn
+- fatigue clear / exhaust
+- energy / hunger controls
+- sleep / wake
+- whole-leg relax / plant / lift / push / pull
+- individual reach tests for all four legs
+- ground grip / release grips
+- body velocity stop / nudges
+- personality editing
+- forced developmental phases
+- brain freeze
+- motor-policy randomization
+- +50 generations
 
-MIND
-- picks goals and developmental priorities
-- learns which leg primitives were useful
-- does not directly fling five joint targets continuously
+Tutor modes are temporary debug demonstrations. They do not replace the normal movement system.
 
-SPINAL LEG CONTROLLER
-Each leg can be in one action state:
-- relax
-- reach
-- plant
-- grip
-- pull
-- push
-- lift
+## Pure binary `.orb` files
 
-The spinal controller converts that ONE whole-leg action into coordinated hip/knee/ankle/spread/roll
-targets. It is anatomy/reflex behavior, not navigation.
+Every Orbsight can now be exported as its own `.orb` file.
 
-MUSCLES
-- soft compliant motor
-- slow neural target changes
-- strength
-- fatigue
-- use-driven training
-- approximate antagonistic flexor/extensor behavior
+The file contains ONLY `1`, `0`, spaces, and line breaks.
 
-PHYSICS
-- Rapier hard joint limits
-- CCD
-- sole/contact sensors
-- physical spherical grip constraints
+Each group is 8 bits:
+`01001111 01010010 01000010 00010001 ...`
 
-## Newborn behavior
-Only one voluntary leg is usually active at a time.
-Occasionally one opposite leg may act as support.
-Other legs relax.
+Each bit has the normal binary positional weight inside its byte:
+128, 64, 32, 16, 8, 4, 2, 1.
 
-If a foot swings too fast, proprioception immediately sends that leg to RELAX instead of issuing
-another command.
+The fixed schema stores:
+- binary magic + format version
+- name
+- source ID
+- age
+- energy and hunger
+- personality
+- generation and best score
+- developmental phase
+- body-map / crawl / grip / support / balance / step / walk skills
+- successful pulls / plants
+- motor-policy frequency + gain + phase
+- all current learned policy weights
+- each leg's current action and primitive memories
+- all 20 joint muscle strengths
+- all 20 joint fatigue values
+- learned body-model forward/lift/support effects
+- body-model sample counts
 
-If a planted foot finds useful support, the spinal controller keeps it planted briefly instead of
-instantly waving it away.
+## Editing bits manually
 
-## Development
-1. newborn motor discovery
-2. reach + plant
-3. grip + pull crawling
-4. supported crawling
-5. standing practice
-6. first steps
-7. walking practice
+Open Debug Panel -> Binary Orbsight file.
 
-Progress is experience-based:
-- body map grows from successful movement/contact
-- crawl skill grows from grounded translation
-- grip skill grows from anchored pulls that actually move the body
-- support/balance grow from useful planted feet
-- step/walk skill grow only after upright translation
+`Refresh bits` writes the selected Orbsight into the text box.
+You can manually flip bits, then press `Apply edited bits`.
 
-## Grip → crawl
-A planted foot can create a ground grip.
-A reaching foot can grip nearby platforms, walls, blocks, logs, and planks.
-A gripped leg may enter PULL:
-- hip retracts
-- knee flexes
-- anchored foot stays put
-- the shell is physically pulled toward that anchor
-- grip releases and another leg can reach
+Invalid magic/version or incomplete bytes are rejected instead of corrupting the creature.
 
-## Floor protection
-Each foot has a sole-pressure sensor and foot-height sensor.
-If a foot is already contacting/pressing the floor, the controller does not deliberately continue a
-downward reach. A tiny emergency upward velocity correction only activates below the floor plane.
+## Import / export
 
-## Walking
-Walking is not active at birth.
-After crawling/support/balance develop, the mind begins choosing lift/plant/push primitives in a
-more useful sequence. The learned policy only makes small nudges to these spinal primitives later.
+- `Export selected .orb` downloads the selected individual.
+- `Import .orb as new` creates another Orbsight from the file.
+- `Load .orb into selected` replaces the selected Orbsight's learned/personality/muscle data.
+- Clone creates another creature by round-tripping through the same binary format.
+
+This means an Orbsight is now portable as a compact binary-state creature file rather than only
+existing inside the running page.
